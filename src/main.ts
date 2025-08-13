@@ -34,7 +34,7 @@ function runCommand(cmd: string[], cwd: string): Promise<string> {
       });
 
       let output = "";
-      child.stdout.on("data", (data) => {
+      child.stdout.on("data", (data: Buffer) => {
         output += data.toString();
       });
 
@@ -58,7 +58,7 @@ async function getGitInfo(currentDir: string): Promise<string> {
       const child = spawn("git", ["-C", currentDir, "rev-parse", "--git-dir"], {
         stdio: ["ignore", "pipe", "ignore"],
       });
-      child.on("close", (code) => {
+      child.on("close", (code: number) => {
         if (code === 0) resolve();
         else reject();
       });
