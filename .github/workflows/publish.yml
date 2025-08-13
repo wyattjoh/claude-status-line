@@ -24,13 +24,13 @@ jobs:
           deno-version: v2.x
 
       - name: Check formatting
-        run: deno task fmt --check
+        run: deno fmt --check
 
       - name: Lint code
-        run: deno task lint
+        run: deno lint
 
       - name: Type check
-        run: deno task check
+        run: deno check
 
       - name: Publish package to JSR
         run: deno publish
