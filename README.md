@@ -18,7 +18,7 @@ Add this to your `.claude/settings.json`:
 {
   "statusLine": {
     "type": "command",
-    "command": "deno run --allow-read --allow-run jsr:@wyattjoh/claude-status-line"
+    "command": "deno run --allow-read --allow-run --allow-env jsr:@wyattjoh/claude-status-line"
   }
 }
 ```

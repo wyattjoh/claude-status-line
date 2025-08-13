@@ -1,11 +1,14 @@
 {
   "name": "@wyattjoh/claude-status-line",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "A status line for Claude Code",
   "license": "MIT",
   "exports": {
     ".": "./src/main.ts",
     "./claude": "./src/claude.ts"
+  },
+  "publish": {
+    "include": ["LICENSE", "README.md", "src/**/*.ts", "deno.json"]
   },
   "compilerOptions": {
     "strict": true,
