@@ -154,7 +154,7 @@ async function main(): Promise<void> {
   console.log(statusLine);
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) {
+if (import.meta.main) {
   try {
     await main();
   } catch (err) {
