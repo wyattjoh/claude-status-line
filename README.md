@@ -1,13 +1,14 @@
 # Claude Code Status Line
 
-A TypeScript/Deno-based status line for Claude Code that displays project information, git branch, model details, and session time remaining.
+A TypeScript/Deno-based status line for Claude Code that displays project information, git branch, model details, session cost, and context token usage.
 
 ## Features
 
 - 🤖 **Model Display**: Shows the current Claude model being used
 - 📁 **Project Info**: Displays project name and current directory
 - 🌿 **Git Integration**: Shows current git branch when in a repository
-- ⏰ **Session Timer**: Tracks remaining time in your 5-hour Claude session
+- 💰 **Session Cost**: Displays current session cost in CAD
+- 📈 **Context Usage**: Shows context token percentage
 - 🎨 **Clean Icons**: Uses emojis for visual clarity
 
 ## Installation
@@ -18,7 +19,7 @@ Add this to your `.claude/settings.json`:
 {
   "statusLine": {
     "type": "command",
-    "command": "deno run --allow-read --allow-run --allow-env jsr:@wyattjoh/claude-status-line"
+    "command": "deno run --allow-net --allow-env --allow-read --allow-write --allow-run --allow-sys jsr:@wyattjoh/claude-status-line@0.1.0"
   }
 }
 ```
@@ -61,45 +62,24 @@ It then builds a status line showing:
 
 - Project name (if different from current directory)
 - Model name with robot emoji
-- Session time remaining (parsed from Claude usage logs)
+- Session cost in CAD (fetched from ccusage)
+- Context token usage percentage
 - Current directory with folder emoji
 - Git branch with branch emoji
 
-### Session Tracking
+### Usage Tracking
 
-The status line tracks your Claude session time by:
+The status line tracks your Claude usage by:
 
-1. Reading JSONL usage files from `~/.claude/projects/` directories
-2. Parsing today's entries to identify active sessions
-3. Calculating remaining time from a 5-hour session limit
-4. Displaying time in human-readable format (e.g., "2h 30m left")
+1. Loading session usage data using the ccusage library
+2. Calculating session cost and displaying in CAD
+3. Computing context token usage percentage from transcript files
+4. Displaying real-time cost and context information
 
 ### Example Output
 
 ```
-📁 my-project | 🤖 Claude 3.5 Sonnet | ⏰ 3h 45m left | 📂 src | 🌿 feature-branch
-```
-
-## Configuration
-
-### Customizing Icons
-
-Edit the emoji icons in `src/main.ts`:
-
-```typescript
-components.push(`🤖 ${modelName}`); // Model
-components.push(`📁 ${projectName}`); // Project
-components.push(`📂 ${dirName}`); // Directory
-components.push(`🌿 ${branch}`); // Git branch
-components.push(`⏰ ${timeLeft}`); // Session time
-```
-
-### Adjusting Session Duration
-
-The default session duration is 5 hours. To change it, modify:
-
-```typescript
-const SESSION_DURATION_MS = 5 * 60 * 60 * 1000; // 5 hours
+📁 my-project | 🤖 Claude 3.5 Sonnet | 💰 $0.45 CAD session | 📈 67% | 📂 src | 🌿 feature-branch
 ```
 
 ## Troubleshooting
@@ -110,11 +90,17 @@ const SESSION_DURATION_MS = 5 * 60 * 60 * 1000; // 5 hours
 - Check that `git` command is available in PATH
 - Verify git repository is properly initialized
 
-### Session Time Not Displaying
+### Session Cost Not Displaying
 
-- Check that Claude usage logs exist in `~/.claude/projects/`
-- Ensure the script has read permissions to Claude directories
-- Verify JSONL files contain recent usage data
+- Ensure the ccusage library can access Claude usage data
+- Check that the session ID is valid and usage data exists
+- Verify network access for currency conversion
+
+### Context Percentage Not Showing
+
+- Ensure the transcript path is accessible
+- Check that the transcript file contains valid data
+- Verify file read permissions for the transcript directory
 
 ## Contributing
 

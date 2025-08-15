@@ -1,103 +1,20 @@
 import { basename } from "node:path";
-import { spawn } from "node:child_process";
 import process from "node:process";
 import { Buffer } from "node:buffer";
+import { logger } from "ccusage/logger";
+import {
+  calculateContextTokens,
+  loadSessionUsageById,
+} from "ccusage/data-loader";
 
-import { formatTimeLeft, getSessionData } from "./claude.ts";
-
-/**
- * The Claude context object is passed to the statusline script.
- *
- * @see https://docs.anthropic.com/en/docs/claude-code/statusline
- */
-interface ClaudeContext {
-  session_id: string;
-  transcript_path: string;
-  model: {
-    id: string;
-    display_name: string;
-  };
-  workspace: {
-    current_dir: string;
-    project_dir: string;
-  };
-}
-
-const SESSION_DURATION_MS = 5 * 60 * 60 * 1000; // 5 hours
-
-function runCommand(cmd: string[], cwd: string): Promise<string> {
-  try {
-    return new Promise((resolve) => {
-      const child = spawn(cmd[0], cmd.slice(1), {
-        cwd,
-        stdio: ["ignore", "pipe", "ignore"],
-      });
-
-      let output = "";
-      child.stdout.on("data", (data: Buffer) => {
-        output += data.toString();
-      });
-
-      child.on("close", () => {
-        resolve(output.trim());
-      });
-
-      child.on("error", () => {
-        resolve("");
-      });
-    });
-  } catch {
-    return Promise.resolve("");
-  }
-}
-
-async function getGitInfo(currentDir: string): Promise<string> {
-  try {
-    // Check if we're in a git repository
-    await new Promise<void>((resolve, reject) => {
-      const child = spawn("git", ["-C", currentDir, "rev-parse", "--git-dir"], {
-        stdio: ["ignore", "pipe", "ignore"],
-      });
-      child.on("close", (code: number) => {
-        if (code === 0) resolve();
-        else reject();
-      });
-      child.on("error", reject);
-    });
-
-    // Get current branch
-    const branch = await runCommand(
-      ["git", "branch", "--show-current"],
-      currentDir,
-    );
-    if (branch) {
-      return `🌿 ${branch}`;
-    }
-  } catch {
-    // Not a git repository or git command failed
-  }
-
-  return "";
-}
-
-async function getSessionTime(): Promise<string | null> {
-  const sessionData = await getSessionData();
-  if (!sessionData) {
-    return null;
-  }
-
-  const now = new Date();
-  const elapsed = now.getTime() - sessionData.start.getTime();
-  const remaining = Math.max(0, SESSION_DURATION_MS - elapsed);
-
-  if (remaining > 0) {
-    return `⏰ ${formatTimeLeft(remaining, true)}`;
-  }
-
-  return null;
-}
+import { formatCurrency } from "./currency.ts";
+import { getGitInfo } from "./git.ts";
+import type { ClaudeContext } from "./types.ts";
 
 async function main(): Promise<void> {
+  // Disable logging from ccusage.
+  logger.removeReporter();
+
   // Read Claude Code context from stdin
   const chunks: Buffer[] = [];
   for await (const chunk of process.stdin) {
@@ -106,15 +23,11 @@ async function main(): Promise<void> {
   const input = Buffer.concat(chunks).toString();
 
   const {
+    session_id: sessionID,
+    transcript_path: transcriptPath,
     model: { display_name: modelName },
     workspace: { current_dir: currentDir, project_dir: projectDir },
   }: ClaudeContext = JSON.parse(input);
-
-  // Get just the directory name for cleaner display
-  const dirName = currentDir ? basename(currentDir) : "~";
-
-  // Get git information
-  const gitInfo = await getGitInfo(currentDir);
 
   // Build status line components with icons and separators
   const components: string[] = [];
@@ -125,9 +38,6 @@ async function main(): Promise<void> {
     projectName = `📁 ${basename(projectDir)}`;
   }
 
-  // Get Claude session time remaining
-  const sessionTime = await getSessionTime();
-
   // Add project name if available
   if (projectName) {
     components.push(projectName);
@@ -136,22 +46,35 @@ async function main(): Promise<void> {
   // Add AI model with icon
   components.push(`🤖 ${modelName}`);
 
-  // Add Claude session time if available
-  if (sessionTime) {
-    components.push(sessionTime);
+  // Load the session usage by ID and format the cost in CAD.
+  const sessionUsage = await loadSessionUsageById(sessionID, {
+    mode: "auto",
+    offline: false,
+  });
+  if (sessionUsage) {
+    const sessionDisplay = await formatCurrency(sessionUsage.totalCost, "CAD");
+    components.push(`💰 ${sessionDisplay} session`);
   }
 
-  // Add directory with icon
+  const contextTokens = await calculateContextTokens(transcriptPath);
+  if (contextTokens) {
+    components.push(`📈 ${contextTokens.percentage}%`);
+  } else {
+    components.push(`📈 0%`);
+  }
+
+  // Get just the directory name for cleaner display
+  const dirName = currentDir ? basename(currentDir) : "~";
   components.push(`📂 ${dirName}`);
 
-  // Add git branch if available
+  // Get git information and add to components.
+  const gitInfo = await getGitInfo(currentDir);
   if (gitInfo) {
-    components.push(gitInfo);
+    components.push(`🌿 ${gitInfo.branch}`);
   }
 
   // Join components with separator and output
-  const statusLine = components.join(" | ");
-  console.log(statusLine);
+  console.log(components.join(" | "));
 }
 
 if (import.meta.main) {

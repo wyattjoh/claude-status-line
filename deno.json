@@ -1,11 +1,10 @@
 {
   "name": "@wyattjoh/claude-status-line",
-  "version": "0.0.3",
+  "version": "0.1.0",
   "description": "A status line for Claude Code",
   "license": "MIT",
   "exports": {
-    ".": "./src/main.ts",
-    "./claude": "./src/claude.ts"
+    ".": "./src/main.ts"
   },
   "publish": {
     "include": ["LICENSE", "README.md", "src/**/*.ts", "deno.json"]
@@ -37,5 +36,8 @@
     "hooks:install": "deno run --allow-read=deno.json,.git/hooks/ --allow-write=.git/hooks/ jsr:@hongminhee/deno-task-hooks",
     "hooks:pre-commit": "deno check && deno fmt --check && deno lint",
     "hooks:pre-push": "deno publish --dry-run --allow-dirty"
+  },
+  "imports": {
+    "ccusage": "npm:ccusage@^15.9.5"
   }
 }
