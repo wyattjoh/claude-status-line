@@ -6,12 +6,13 @@ import {
   calculateContextTokens,
   loadSessionUsageById,
 } from "ccusage/data-loader";
+import { Command } from "@cliffy/command";
 
 import { formatCurrency } from "./currency.ts";
 import { getGitInfo } from "./git.ts";
 import type { ClaudeContext } from "./types.ts";
 
-async function main(): Promise<void> {
+async function buildStatusLine(currency: string): Promise<void> {
   // Disable logging from ccusage.
   logger.removeReporter();
 
@@ -46,13 +47,16 @@ async function main(): Promise<void> {
   // Add AI model with icon
   components.push(`🤖 ${modelName}`);
 
-  // Load the session usage by ID and format the cost in CAD.
+  // Load the session usage by ID and format the cost in the specified currency.
   const sessionUsage = await loadSessionUsageById(sessionID, {
     mode: "auto",
     offline: false,
   });
   if (sessionUsage) {
-    const sessionDisplay = await formatCurrency(sessionUsage.totalCost, "CAD");
+    const sessionDisplay = await formatCurrency(
+      sessionUsage.totalCost,
+      currency,
+    );
     components.push(`💰 ${sessionDisplay} session`);
   }
 
@@ -79,7 +83,21 @@ async function main(): Promise<void> {
 
 if (import.meta.main) {
   try {
-    await main();
+    await new Command()
+      .name("claude-status-line")
+      .version("0.1.0")
+      .description("A status line for Claude Code")
+      .option(
+        "-c, --currency <currency:string>",
+        "Currency code for session cost display",
+        {
+          default: "CAD",
+        },
+      )
+      .action(async (options) => {
+        await buildStatusLine(options.currency);
+      })
+      .parse(Deno.args);
   } catch (err) {
     console.error("Error:", err instanceof Error ? err.message : String(err));
     process.exit(1);

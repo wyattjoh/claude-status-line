@@ -7,7 +7,7 @@ A TypeScript/Deno-based status line for Claude Code that displays project inform
 - 🤖 **Model Display**: Shows the current Claude model being used
 - 📁 **Project Info**: Displays project name and current directory
 - 🌿 **Git Integration**: Shows current git branch when in a repository
-- 💰 **Session Cost**: Displays current session cost in CAD
+- 💰 **Session Cost**: Displays current session cost in selected currency
 - 📈 **Context Usage**: Shows context token percentage
 - 🎨 **Clean Icons**: Uses emojis for visual clarity
 
@@ -23,6 +23,21 @@ Add this to your `.claude/settings.json`:
   }
 }
 ```
+
+### Customization
+
+You can customize the currency used for session cost display by adding the `--currency` flag:
+
+```json
+{
+  "statusLine": {
+    "type": "command",
+    "command": "deno run --allow-net --allow-env --allow-read --allow-write --allow-run --allow-sys jsr:@wyattjoh/claude-status-line@0.1.0 --currency USD"
+  }
+}
+```
+
+Supported currencies include: USD, EUR, GBP, JPY, AUD, and many others. Defaults to CAD.
 
 ## Development
 
@@ -62,7 +77,7 @@ It then builds a status line showing:
 
 - Project name (if different from current directory)
 - Model name with robot emoji
-- Session cost in CAD (fetched from ccusage)
+- Session cost in desired currency (fetched from ccusage)
 - Context token usage percentage
 - Current directory with folder emoji
 - Git branch with branch emoji
@@ -72,14 +87,14 @@ It then builds a status line showing:
 The status line tracks your Claude usage by:
 
 1. Loading session usage data using the ccusage library
-2. Calculating session cost and displaying in CAD
+2. Calculating session cost and displaying in configured currency
 3. Computing context token usage percentage from transcript files
 4. Displaying real-time cost and context information
 
 ### Example Output
 
 ```
-📁 my-project | 🤖 Claude 3.5 Sonnet | 💰 $0.45 CAD session | 📈 67% | 📂 src | 🌿 feature-branch
+📁 my-project | 🤖 Claude 3.5 Sonnet | 💰 $0.45 session | 📈 67% | 📂 src | 🌿 feature-branch
 ```
 
 ## Troubleshooting
@@ -120,3 +135,4 @@ MIT License - see LICENSE file for details
 - [Claude Code Status Line Guide](https://docs.anthropic.com/en/docs/claude-code/statusline)
 - [Deno Documentation](https://deno.land/manual)
 - Forked from https://github.com/nmwagencia/reimagined-journey
+- Uses currency data provided at https://github.com/fawazahmed0/exchange-api

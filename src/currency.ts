@@ -7,8 +7,8 @@ interface CacheData {
   timestamp: number;
 }
 
-function getCacheFilePath(target: string): string {
-  return join(tmpdir(), `claude-currency-${target.toLowerCase()}.json`);
+function getCacheFilePath(currency: string): string {
+  return join(tmpdir(), `claude-currency-${currency.toLowerCase()}.json`);
 }
 
 function isCacheFresh(timestamp: number): boolean {
@@ -41,8 +41,8 @@ async function writeCache(filePath: string, rate: number): Promise<void> {
   }
 }
 
-async function getCurrencyRates(target: string): Promise<number | null> {
-  const cacheFile = getCacheFilePath(target);
+async function getCurrencyRates(currency: string): Promise<number | null> {
+  const cacheFile = getCacheFilePath(currency);
 
   const cached = await readCache(cacheFile);
   if (cached && isCacheFresh(cached.timestamp)) {
@@ -57,7 +57,7 @@ async function getCurrencyRates(target: string): Promise<number | null> {
   }
 
   const data = await response.json();
-  const rate = data?.usd?.[target.toLowerCase()] ?? null;
+  const rate = data?.usd?.[currency.toLowerCase()] ?? null;
 
   if (rate !== null) {
     await writeCache(cacheFile, rate);
@@ -68,9 +68,9 @@ async function getCurrencyRates(target: string): Promise<number | null> {
 
 export async function formatCurrency(
   amount: number,
-  target: string,
+  currency: string,
 ): Promise<string> {
-  const rate = await getCurrencyRates(target);
+  const rate = await getCurrencyRates(currency);
   if (rate) {
     return `$${(amount * rate).toFixed(2)}`;
   }
