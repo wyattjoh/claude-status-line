@@ -28,6 +28,7 @@ async function buildStatusLine(currency: string): Promise<void> {
     transcript_path: transcriptPath,
     model: { display_name: modelName },
     workspace: { current_dir: currentDir, project_dir: projectDir },
+    cost,
   }: ClaudeContext = JSON.parse(input);
 
   // Build status line components with icons and separators
@@ -47,17 +48,23 @@ async function buildStatusLine(currency: string): Promise<void> {
   // Add AI model with icon
   components.push(`🤖 ${modelName}`);
 
-  // Load the session usage by ID and format the cost in the specified currency.
-  const sessionUsage = await loadSessionUsageById(sessionID, {
-    mode: "auto",
-    offline: false,
-  });
-  if (sessionUsage) {
-    const sessionDisplay = await formatCurrency(
-      sessionUsage.totalCost,
-      currency,
-    );
+  if (cost) {
+    const sessionDisplay = await formatCurrency(cost.total_cost_usd, currency);
+
     components.push(`💰 ${sessionDisplay} session`);
+  } else {
+    // Load the session usage by ID and format the cost in the specified currency.
+    const sessionUsage = await loadSessionUsageById(sessionID, {
+      mode: "auto",
+      offline: false,
+    });
+    if (sessionUsage) {
+      const sessionDisplay = await formatCurrency(
+        sessionUsage.totalCost,
+        currency,
+      );
+      components.push(`💰 ${sessionDisplay} session`);
+    }
   }
 
   const contextTokens = await calculateContextTokens(transcriptPath);

@@ -19,7 +19,7 @@ Add this to your `.claude/settings.json`:
 {
   "statusLine": {
     "type": "command",
-    "command": "deno run --allow-net --allow-env --allow-read --allow-write --allow-run --allow-sys jsr:@wyattjoh/claude-status-line@0.1.0"
+    "command": "deno run --allow-net --allow-env --allow-read --allow-write --allow-run --allow-sys jsr:@wyattjoh/claude-status-line@0.2.0"
   }
 }
 ```
@@ -32,7 +32,7 @@ You can customize the currency used for session cost display by adding the `--cu
 {
   "statusLine": {
     "type": "command",
-    "command": "deno run --allow-net --allow-env --allow-read --allow-write --allow-run --allow-sys jsr:@wyattjoh/claude-status-line@0.1.0 --currency USD"
+    "command": "deno run --allow-net --allow-env --allow-read --allow-write --allow-run --allow-sys jsr:@wyattjoh/claude-status-line@0.2.0 --currency USD"
   }
 }
 ```
