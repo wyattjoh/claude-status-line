@@ -4,12 +4,15 @@ A TypeScript/Deno-based status line for Claude Code that displays project inform
 
 ## Features
 
-- 🤖 **Model Display**: Shows the current Claude model being used
+- 🤖 **Model Display**: Shows current Claude model (or multiple if used)
 - 📁 **Project Info**: Displays project name and current directory
 - 🌿 **Git Integration**: Shows current git branch when in a repository
 - 💰 **Session Cost**: Displays current session cost in selected currency
-- 📈 **Context Usage**: Shows context token percentage
-- 🎨 **Clean Icons**: Uses emojis for visual clarity
+- 📊 **Token Usage**: Shows input/output token counts
+- ⚡ **Cache Efficiency**: Shows percentage of tokens served from cache
+- 📈 **Context Usage**: Shows context token percentage with limits
+- ⏱️ **Session Duration**: Shows how long the session has been active
+- 📝 **Lines Changed**: Shows lines added/removed during session
 
 ## Installation
 
@@ -19,7 +22,7 @@ Add this to your `.claude/settings.json`:
 {
   "statusLine": {
     "type": "command",
-    "command": "deno run --allow-net --allow-env --allow-read --allow-write --allow-run --allow-sys jsr:@wyattjoh/claude-status-line@0.2.0"
+    "command": "deno run --allow-net --allow-env --allow-read --allow-write --allow-run --allow-sys jsr:@wyattjoh/claude-status-line@0.4.0"
   }
 }
 ```
@@ -32,7 +35,7 @@ You can customize the currency used for session cost display by adding the `--cu
 {
   "statusLine": {
     "type": "command",
-    "command": "deno run --allow-net --allow-env --allow-read --allow-write --allow-run --allow-sys jsr:@wyattjoh/claude-status-line@0.2.0 --currency USD"
+    "command": "deno run --allow-net --allow-env --allow-read --allow-write --allow-run --allow-sys jsr:@wyattjoh/claude-status-line@0.3.0 --currency USD"
   }
 }
 ```
@@ -70,17 +73,30 @@ interface ClaudeContext {
     current_dir: string;
     project_dir: string;
   };
+  cost:
+    | {
+      total_cost_usd: number;
+      total_duration_ms: number;
+      total_api_duration_ms: number;
+      total_lines_added: number;
+      total_lines_removed: number;
+    }
+    | undefined;
 }
 ```
 
 It then builds a status line showing:
 
 - Project name (if different from current directory)
-- Model name with robot emoji
-- Session cost in desired currency (fetched from ccusage)
-- Context token usage percentage
-- Current directory with folder emoji
-- Git branch with branch emoji
+- Model name (or multiple models if used in session)
+- Session cost in desired currency with currency code
+- Input/output token counts
+- Cache efficiency percentage
+- Context token usage with current/limit counts
+- Session duration
+- Lines added/removed
+- Current directory
+- Git branch
 
 ### Usage Tracking
 
@@ -94,7 +110,7 @@ The status line tracks your Claude usage by:
 ### Example Output
 
 ```
-📁 my-project | 🤖 Claude 3.5 Sonnet | 💰 $0.45 session | 📈 67% | 📂 src | 🌿 feature-branch
+🤖 Opus 4.5 | 💰 $5.12 CAD | 📊 984/8.3K | ⚡ 100% | 📈 26% (51K/200K) | ⏱️ 5m | +150/-30 | 📂 my-project | 🌿 main
 ```
 
 ## Troubleshooting

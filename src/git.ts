@@ -47,7 +47,7 @@ export async function getGitInfo(currentDir: string): Promise<GitInfo | null> {
 
     // Get current branch
     const branch = await runCommand(
-      ["git", "branch", "--show-current"],
+      ["git", "-C", currentDir, "branch", "--show-current"],
       currentDir,
     );
     if (branch) {

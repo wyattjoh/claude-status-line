@@ -49,21 +49,26 @@ async function getCurrencyRates(currency: string): Promise<number | null> {
     return cached.rate;
   }
 
-  const response = await fetch(
-    "https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@latest/v1/currencies/usd.min.json",
-  );
-  if (!response.ok) {
+  try {
+    const response = await fetch(
+      "https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@latest/v1/currencies/usd.min.json",
+    );
+    if (!response.ok) {
+      return null;
+    }
+
+    const data = await response.json();
+    const rate = data?.usd?.[currency.toLowerCase()] ?? null;
+
+    if (rate !== null) {
+      await writeCache(cacheFile, rate);
+    }
+
+    return rate;
+  } catch {
+    // Network error or JSON parse failure
     return null;
   }
-
-  const data = await response.json();
-  const rate = data?.usd?.[currency.toLowerCase()] ?? null;
-
-  if (rate !== null) {
-    await writeCache(cacheFile, rate);
-  }
-
-  return rate;
 }
 
 export async function formatCurrency(
