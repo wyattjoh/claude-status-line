@@ -1,6 +1,6 @@
 {
   "name": "@wyattjoh/claude-status-line",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "A status line for Claude Code",
   "license": "MIT",
   "exports": {
@@ -38,7 +38,7 @@
     "hooks:pre-push": "deno publish --dry-run --allow-dirty"
   },
   "imports": {
-    "ccusage": "npm:ccusage@^15.9.5",
+    "ccusage": "npm:ccusage@^17.2.1",
     "@cliffy/command": "jsr:@cliffy/command@^1.0.0-rc.7"
   }
 }
