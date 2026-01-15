@@ -15,6 +15,7 @@ import {
 import { getGitInfo } from "./git.ts";
 import { loadSessionMetrics } from "./session.ts";
 import type { ClaudeContext } from "./types.ts";
+import { getWeather } from "./weather.ts";
 
 function parseClaudeContext(input: string): ClaudeContext {
   try {
@@ -24,7 +25,12 @@ function parseClaudeContext(input: string): ClaudeContext {
   }
 }
 
-async function buildStatusLine(currency: string): Promise<void> {
+interface BuildOptions {
+  currency: string;
+  location: string | undefined;
+}
+
+async function buildStatusLine(options: BuildOptions): Promise<void> {
   // Disable logging from ccusage.
   logger.removeReporter();
 
@@ -44,11 +50,13 @@ async function buildStatusLine(currency: string): Promise<void> {
   } = parseClaudeContext(input);
 
   // Load async data in parallel for better performance
-  const [sessionMetrics, contextTokens, gitInfo] = await Promise.all([
-    loadSessionMetrics(sessionID),
-    calculateContextTokens(transcriptPath),
-    getGitInfo(currentDir),
-  ]);
+  const [sessionMetrics, contextTokens, gitInfo, weatherInfo] = await Promise
+    .all([
+      loadSessionMetrics(sessionID),
+      calculateContextTokens(transcriptPath),
+      getGitInfo(currentDir),
+      options.location ? getWeather(options.location) : Promise.resolve(null),
+    ]);
 
   // Build status line components with icons and separators
   const components: string[] = [];
@@ -68,14 +76,17 @@ async function buildStatusLine(currency: string): Promise<void> {
 
   // Add session cost with currency code
   if (cost) {
-    const sessionDisplay = await formatCurrency(cost.total_cost_usd, currency);
-    components.push(`💰 ${sessionDisplay} ${currency}`);
+    const sessionDisplay = await formatCurrency(
+      cost.total_cost_usd,
+      options.currency,
+    );
+    components.push(`💰 ${sessionDisplay} ${options.currency}`);
   } else if (sessionMetrics) {
     const sessionDisplay = await formatCurrency(
       sessionMetrics.totalCost,
-      currency,
+      options.currency,
     );
-    components.push(`💰 ${sessionDisplay} ${currency}`);
+    components.push(`💰 ${sessionDisplay} ${options.currency}`);
   }
 
   // Add token counts (input/output)
@@ -125,6 +136,11 @@ async function buildStatusLine(currency: string): Promise<void> {
     components.push(`🌿 ${gitInfo.branch}`);
   }
 
+  // Add weather if available
+  if (weatherInfo) {
+    components.push(`${weatherInfo.icon} ${weatherInfo.temperature}°C`);
+  }
+
   // Join components with separator and output
   console.log(components.join(" | "));
 }
@@ -142,8 +158,15 @@ if (import.meta.main) {
           default: "CAD",
         },
       )
+      .option(
+        "-l, --location <location:string>",
+        "Weather location (city name or coordinates)",
+      )
       .action(async (options) => {
-        await buildStatusLine(options.currency);
+        await buildStatusLine({
+          currency: options.currency,
+          location: options.location,
+        });
       })
       .parse(Deno.args);
   } catch (err) {
