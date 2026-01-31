@@ -17,6 +17,22 @@ import { loadSessionMetrics } from "./session.ts";
 import type { ClaudeContext } from "./types.ts";
 import { getWeather } from "./weather.ts";
 
+const ALL_MODULES = [
+  "project",
+  "model",
+  "cost",
+  "tokens",
+  "cache",
+  "context",
+  "duration",
+  "lines",
+  "dir",
+  "git",
+  "weather",
+] as const;
+
+type Module = typeof ALL_MODULES[number];
+
 function parseClaudeContext(input: string): ClaudeContext {
   try {
     return JSON.parse(input) as ClaudeContext;
@@ -28,6 +44,7 @@ function parseClaudeContext(input: string): ClaudeContext {
 interface BuildOptions {
   currency: string;
   location: string | undefined;
+  modules: Set<Module> | undefined;
 }
 
 async function buildStatusLine(options: BuildOptions): Promise<void> {
@@ -60,44 +77,49 @@ async function buildStatusLine(options: BuildOptions): Promise<void> {
 
   // Build status line components with icons and separators
   const components: string[] = [];
+  const show = (name: Module) => !options.modules || options.modules.has(name);
 
   // Get project name if available
-  if (projectDir && projectDir !== currentDir) {
+  if (show("project") && projectDir && projectDir !== currentDir) {
     components.push(`📁 ${basename(projectDir)}`);
   }
 
   // Add AI model with icon - show multiple models if used
-  if (sessionMetrics && sessionMetrics.modelsUsed.length > 1) {
-    const shortNames = sessionMetrics.modelsUsed.map(shortenModelName);
-    components.push(`🤖 ${shortNames.join("+")}`);
-  } else {
-    components.push(`🤖 ${modelName}`);
+  if (show("model")) {
+    if (sessionMetrics && sessionMetrics.modelsUsed.length > 1) {
+      const shortNames = sessionMetrics.modelsUsed.map(shortenModelName);
+      components.push(`🤖 ${shortNames.join("+")}`);
+    } else {
+      components.push(`🤖 ${modelName}`);
+    }
   }
 
   // Add session cost with currency code
-  if (cost) {
-    const sessionDisplay = await formatCurrency(
-      cost.total_cost_usd,
-      options.currency,
-    );
-    components.push(`💰 ${sessionDisplay} ${options.currency}`);
-  } else if (sessionMetrics) {
-    const sessionDisplay = await formatCurrency(
-      sessionMetrics.totalCost,
-      options.currency,
-    );
-    components.push(`💰 ${sessionDisplay} ${options.currency}`);
+  if (show("cost")) {
+    if (cost) {
+      const sessionDisplay = await formatCurrency(
+        cost.total_cost_usd,
+        options.currency,
+      );
+      components.push(`💰 ${sessionDisplay} ${options.currency}`);
+    } else if (sessionMetrics) {
+      const sessionDisplay = await formatCurrency(
+        sessionMetrics.totalCost,
+        options.currency,
+      );
+      components.push(`💰 ${sessionDisplay} ${options.currency}`);
+    }
   }
 
   // Add token counts (input/output)
-  if (sessionMetrics) {
+  if (show("tokens") && sessionMetrics) {
     const inputDisplay = formatCompactNumber(sessionMetrics.inputTokens);
     const outputDisplay = formatCompactNumber(sessionMetrics.outputTokens);
     components.push(`📊 ${inputDisplay}/${outputDisplay}`);
   }
 
   // Add cache efficiency
-  if (sessionMetrics) {
+  if (show("cache") && sessionMetrics) {
     const efficiency = calculateCacheEfficiency(
       sessionMetrics.cacheReadTokens,
       sessionMetrics.inputTokens,
@@ -106,38 +128,45 @@ async function buildStatusLine(options: BuildOptions): Promise<void> {
   }
 
   // Add context usage with limit
-  if (contextTokens) {
-    const currentDisplay = formatCompactNumber(contextTokens.inputTokens);
-    const limitDisplay = formatCompactNumber(contextTokens.contextLimit);
-    components.push(
-      `📈 ${contextTokens.percentage}% (${currentDisplay}/${limitDisplay})`,
-    );
-  } else {
-    components.push(`📈 0%`);
+  if (show("context")) {
+    if (contextTokens) {
+      const currentDisplay = formatCompactNumber(contextTokens.inputTokens);
+      const limitDisplay = formatCompactNumber(contextTokens.contextLimit);
+      components.push(
+        `🧠 ${contextTokens.percentage}% (${currentDisplay}/${limitDisplay})`,
+      );
+    } else {
+      components.push(`🧠 0%`);
+    }
   }
 
   // Add session duration
-  if (cost) {
+  if (show("duration") && cost) {
     const durationDisplay = formatDuration(cost.total_duration_ms);
     components.push(`⏱️ ${durationDisplay}`);
   }
 
   // Add lines changed
-  if (cost && (cost.total_lines_added > 0 || cost.total_lines_removed > 0)) {
+  if (
+    show("lines") && cost &&
+    (cost.total_lines_added > 0 || cost.total_lines_removed > 0)
+  ) {
     components.push(`+${cost.total_lines_added}/-${cost.total_lines_removed}`);
   }
 
   // Get just the directory name for cleaner display
-  const dirName = currentDir ? basename(currentDir) : "~";
-  components.push(`📂 ${dirName}`);
+  if (show("dir")) {
+    const dirName = currentDir ? basename(currentDir) : "~";
+    components.push(`📂 ${dirName}`);
+  }
 
   // Add git branch if available
-  if (gitInfo) {
+  if (show("git") && gitInfo) {
     components.push(`🌿 ${gitInfo.branch}`);
   }
 
   // Add weather if available
-  if (weatherInfo) {
+  if (show("weather") && weatherInfo) {
     components.push(`${weatherInfo.icon} ${weatherInfo.temperature}°C`);
   }
 
@@ -162,10 +191,31 @@ if (import.meta.main) {
         "-l, --location <location:string>",
         "Weather location (city name or coordinates)",
       )
+      .option(
+        "-m, --modules <modules:string>",
+        "Comma-separated list of modules to display (default: all). Valid modules: " +
+          ALL_MODULES.join(", "),
+      )
       .action(async (options) => {
+        let modules: Set<Module> | undefined;
+        if (options.modules) {
+          const names = options.modules.split(",").map((s: string) => s.trim());
+          const invalid = names.filter(
+            (n: string) => !ALL_MODULES.includes(n as Module),
+          );
+          if (invalid.length > 0) {
+            throw new Error(
+              `Invalid module(s): ${invalid.join(", ")}. Valid modules: ${
+                ALL_MODULES.join(", ")
+              }`,
+            );
+          }
+          modules = new Set(names as Module[]);
+        }
         await buildStatusLine({
           currency: options.currency,
           location: options.location,
+          modules,
         });
       })
       .parse(Deno.args);

@@ -29,7 +29,7 @@ The application follows a functional architecture:
    - 📁 Project name (if different from current directory)
    - 🤖 Model name
    - 💰 Session cost in CAD (fetched from ccusage)
-   - 📈 Context token percentage
+   - 🧠 Context token percentage
    - 📂 Current directory basename
    - 🌿 Git branch (if in repository)
 3. **Output**: Joins components with " | " separator
@@ -44,6 +44,10 @@ The application follows a functional architecture:
 - All external command executions (git) are wrapped in try-catch with graceful fallbacks
 - Currency conversion failures fall back to USD display
 - Missing git repositories or branches result in empty components
+
+## Documentation
+
+Always update `README.md` after code changes that affect the public-facing API or output (e.g., new modules, changed emojis, new flags, modified example output).
 
 ## Testing and Quality
 

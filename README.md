@@ -10,7 +10,7 @@ A TypeScript/Deno-based status line for Claude Code that displays project inform
 - 💰 **Session Cost**: Displays current session cost in selected currency
 - 📊 **Token Usage**: Shows input/output token counts
 - ⚡ **Cache Efficiency**: Shows percentage of tokens served from cache
-- 📈 **Context Usage**: Shows context token percentage with limits
+- 🧠 **Context Usage**: Shows context token percentage with limits
 - ⏱️ **Session Duration**: Shows how long the session has been active
 - 📝 **Lines Changed**: Shows lines added/removed during session
 
@@ -29,6 +29,8 @@ Add this to your `.claude/settings.json`:
 
 ### Customization
 
+#### Currency
+
 You can customize the currency used for session cost display by adding the `--currency` flag:
 
 ```json
@@ -41,6 +43,35 @@ You can customize the currency used for session cost display by adding the `--cu
 ```
 
 Supported currencies include: USD, EUR, GBP, JPY, AUD, and many others. Defaults to CAD.
+
+#### Modules
+
+You can selectively enable status line modules using the `--modules` / `-m` flag with a comma-separated list of module names. When omitted, all modules are shown.
+
+```json
+{
+  "statusLine": {
+    "type": "command",
+    "command": "deno run --allow-net --allow-env --allow-read --allow-write --allow-run --allow-sys jsr:@wyattjoh/claude-status-line@0.4.0 --modules model,cost,context,git"
+  }
+}
+```
+
+Available modules:
+
+| Module     | Emoji | Description                        |
+| ---------- | ----- | ---------------------------------- |
+| `project`  | 📁    | Project directory name             |
+| `model`    | 🤖    | AI model name                      |
+| `cost`     | 💰    | Session cost                       |
+| `tokens`   | 📊    | Input/output token counts          |
+| `cache`    | ⚡    | Cache efficiency %                 |
+| `context`  | 🧠    | Context token usage                |
+| `duration` | ⏱️    | Session duration                   |
+| `lines`    | +/-   | Lines added/removed                |
+| `dir`      | 📂    | Current directory                  |
+| `git`      | 🌿    | Git branch                         |
+| `weather`  | icon  | Weather info (requires --location) |
 
 ## Development
 
@@ -110,7 +141,7 @@ The status line tracks your Claude usage by:
 ### Example Output
 
 ```
-🤖 Opus 4.5 | 💰 $5.12 CAD | 📊 984/8.3K | ⚡ 100% | 📈 26% (51K/200K) | ⏱️ 5m | +150/-30 | 📂 my-project | 🌿 main
+🤖 Opus 4.5 | 💰 $5.12 CAD | 📊 984/8.3K | ⚡ 100% | 🧠 26% (51K/200K) | ⏱️ 5m | +150/-30 | 📂 my-project | 🌿 main
 ```
 
 ## Troubleshooting
