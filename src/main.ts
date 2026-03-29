@@ -61,16 +61,26 @@ async function buildStatusLine(options: BuildOptions): Promise<void> {
   const {
     session_id: sessionID,
     transcript_path: transcriptPath,
-    model: { display_name: modelName },
+    model: { id: modelID, display_name: modelName },
     workspace: { current_dir: currentDir, project_dir: projectDir },
     cost,
+    context_window: contextWindow,
   } = parseClaudeContext(input);
 
   // Load async data in parallel for better performance
   const [sessionMetrics, contextTokens, gitInfo, weatherInfo] = await Promise
     .all([
       loadSessionMetrics(sessionID),
-      calculateContextTokens(transcriptPath),
+      contextWindow
+        ? Promise.resolve({
+          inputTokens: contextWindow.total_input_tokens,
+          percentage: Math.round(
+            (contextWindow.total_input_tokens /
+              contextWindow.context_window_size) * 100,
+          ),
+          contextLimit: contextWindow.context_window_size,
+        })
+        : calculateContextTokens(transcriptPath, modelID),
       getGitInfo(currentDir),
       options.location ? getWeather(options.location) : Promise.resolve(null),
     ]);

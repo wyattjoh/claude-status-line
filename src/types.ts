@@ -18,4 +18,11 @@ export interface ClaudeContext {
       total_lines_removed: number;
     }
     | undefined;
+  context_window:
+    | {
+      total_input_tokens: number;
+      total_output_tokens?: number;
+      context_window_size: number;
+    }
+    | undefined;
 }
