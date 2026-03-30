@@ -13,6 +13,7 @@ A TypeScript/Deno-based status line for Claude Code that displays project inform
 - 🧠 **Context Usage**: Shows context token percentage with limits
 - ⏱️ **Session Duration**: Shows how long the session has been active
 - 📝 **Lines Changed**: Shows lines added/removed during session
+- 🌤️ **Weather**: Shows current weather for a configured location
 
 ## Installation
 
@@ -22,7 +23,7 @@ Add this to your `.claude/settings.json`:
 {
   "statusLine": {
     "type": "command",
-    "command": "deno run --allow-net --allow-env --allow-read --allow-write --allow-run --allow-sys jsr:@wyattjoh/claude-status-line@0.4.0"
+    "command": "deno run --allow-net --allow-env --allow-read --allow-write --allow-run --allow-sys jsr:@wyattjoh/claude-status-line"
   }
 }
 ```
@@ -37,7 +38,7 @@ You can customize the currency used for session cost display by adding the `--cu
 {
   "statusLine": {
     "type": "command",
-    "command": "deno run --allow-net --allow-env --allow-read --allow-write --allow-run --allow-sys jsr:@wyattjoh/claude-status-line@0.3.0 --currency USD"
+    "command": "deno run --allow-net --allow-env --allow-read --allow-write --allow-run --allow-sys jsr:@wyattjoh/claude-status-line --currency USD"
   }
 }
 ```
@@ -52,7 +53,7 @@ You can selectively enable status line modules using the `--modules` / `-m` flag
 {
   "statusLine": {
     "type": "command",
-    "command": "deno run --allow-net --allow-env --allow-read --allow-write --allow-run --allow-sys jsr:@wyattjoh/claude-status-line@0.4.0 --modules model,cost,context,git"
+    "command": "deno run --allow-net --allow-env --allow-read --allow-write --allow-run --allow-sys jsr:@wyattjoh/claude-status-line --modules model,cost,context,git"
   }
 }
 ```
@@ -77,7 +78,7 @@ Available modules:
 
 ### Prerequisites
 
-- Deno 1.40+
+- Deno 2.x
 - Access to Claude Code configuration files
 
 ### Available Tasks
@@ -113,6 +114,13 @@ interface ClaudeContext {
       total_lines_removed: number;
     }
     | undefined;
+  context_window:
+    | {
+      total_input_tokens: number;
+      total_output_tokens?: number;
+      context_window_size: number;
+    }
+    | undefined;
 }
 ```
 
@@ -141,7 +149,7 @@ The status line tracks your Claude usage by:
 ### Example Output
 
 ```
-🤖 Opus 4.5 | 💰 $5.12 CAD | 📊 984/8.3K | ⚡ 100% | 🧠 26% (51K/200K) | ⏱️ 5m | +150/-30 | 📂 my-project | 🌿 main
+🤖 Opus 4.6 | 💰 $5.12 CAD | 📊 984/8.3K | ⚡ 100% | 🧠 5% (51K/1M) | ⏱️ 5m | +150/-30 | 📂 my-project | 🌿 main
 ```
 
 ## Troubleshooting
