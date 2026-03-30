@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.6.1](https://github.com/wyattjoh/claude-status-line/compare/claude-status-line-v0.6.0...claude-status-line-v0.6.1) (2026-03-30)
+
+
+### Bug Fixes
+
+* update README with correct version references and 1M context example ([b03f917](https://github.com/wyattjoh/claude-status-line/commit/b03f917aaf454bc27c5fcf2695176ad31d692727))
+
 ## [0.6.0](https://github.com/wyattjoh/claude-status-line/compare/claude-status-line-v0.5.0...claude-status-line-v0.6.0) (2026-03-30)
 
 

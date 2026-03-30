@@ -1,6 +1,6 @@
 {
   "name": "@wyattjoh/claude-status-line",
-  "version": "0.6.0",
+  "version": "0.6.1",
   "description": "A status line for Claude Code",
   "license": "MIT",
   "exports": {
@@ -30,7 +30,9 @@
     "semiColons": true,
     "singleQuote": false,
     "proseWrap": "preserve",
-    "exclude": ["CHANGELOG.md"]
+    "exclude": [
+      "CHANGELOG.md"
+    ]
   },
   "lint": {
     "include": [
