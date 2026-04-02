@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.6.2](https://github.com/wyattjoh/claude-status-line/compare/claude-status-line-v0.6.1...claude-status-line-v0.6.2) (2026-04-02)
+
+
+### Bug Fixes
+
+* use used_percentage from context_window for accurate context display ([a212484](https://github.com/wyattjoh/claude-status-line/commit/a212484197cd4297ae5feeeaf82f5f82bb92e9e6))
+
 ## [0.6.1](https://github.com/wyattjoh/claude-status-line/compare/claude-status-line-v0.6.0...claude-status-line-v0.6.1) (2026-03-30)
 
 
