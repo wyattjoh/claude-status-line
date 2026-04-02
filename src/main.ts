@@ -73,11 +73,17 @@ async function buildStatusLine(options: BuildOptions): Promise<void> {
       loadSessionMetrics(sessionID),
       contextWindow
         ? Promise.resolve({
-          inputTokens: contextWindow.total_input_tokens,
-          percentage: Math.round(
-            (contextWindow.total_input_tokens /
-              contextWindow.context_window_size) * 100,
-          ),
+          inputTokens: contextWindow.used_percentage != null
+            ? Math.round(
+              (contextWindow.used_percentage / 100) *
+                contextWindow.context_window_size,
+            )
+            : contextWindow.total_input_tokens,
+          percentage: contextWindow.used_percentage ??
+            Math.round(
+              (contextWindow.total_input_tokens /
+                contextWindow.context_window_size) * 100,
+            ),
           contextLimit: contextWindow.context_window_size,
         })
         : calculateContextTokens(transcriptPath, modelID),
