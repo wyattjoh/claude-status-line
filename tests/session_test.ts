@@ -1,6 +1,6 @@
 import { assertEquals } from "jsr:@std/assert";
 
-import { aggregateSessionMetrics } from "../src/session.ts";
+import { aggregateSessionMetrics } from "../src/session_metrics.ts";
 
 Deno.test("aggregateSessionMetrics ignores missing model names", () => {
   const metrics = aggregateSessionMetrics(12.34, [

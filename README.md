@@ -11,6 +11,8 @@ A TypeScript/Deno-based status line for Claude Code that displays project inform
 - 📊 **Token Usage**: Shows input/output token counts
 - ⚡ **Cache Efficiency**: Shows percentage of tokens served from cache
 - 🧠 **Context Usage**: Shows context token percentage with limits
+- 🎨 **Percentage Emphasis**: Always renders percentage values in white for `cache`, `context`, `session`, and `week`
+- 📈 **Pace Variance**: `session` and `week` show how far ahead or behind the linear-interpolation pace you are (e.g. `(+10%)` red when over pace, dim when on or under)
 - ⏱️ **Session Duration**: Shows how long the session has been active
 - 📝 **Lines Changed**: Shows lines added/removed during session
 - 🌤️ **Weather**: Shows current weather for a configured location
@@ -78,6 +80,18 @@ Available modules:
 
 `session` and `week` only appear when Claude Code includes the
 subscriber-only `rate_limits` field in stdin.
+
+The percentage value inside `cache`, `context`, `session`, and `week` is always
+emphasized in white using ANSI escape sequences, and the rendered status line
+is prefixed with an ANSI reset so Claude Code's dim styling does not mute the
+effect.
+
+`session` and `week` also include a pace-variance indicator. The window's
+expected usage is computed by linear interpolation from the start of the
+window (`resets_at` minus the window length) to `resets_at`. The difference
+between actual `used_percentage` and that expected value is shown in
+parentheses, e.g. `5h 24% (+10%) (20m)`. Positive deltas (over pace) render in
+red; zero or negative deltas (on or under pace) render dim.
 
 ## Development
 
@@ -168,7 +182,7 @@ The status line tracks your Claude usage by:
 ### Example Output
 
 ```
-🤖 Opus 4.6 | 💰 $5.12 CAD | 📊 984/8.3K | ⚡ 100% | 🧠 5% (51K/1M) | 5h 98% (20m) | 7d 39% (Sun 8:00 AM) | ⏱️ 5m | +150/-30 | 📂 my-project | 🌿 main
+🤖 Opus 4.6 | 💰 $5.12 CAD | 📊 984/8.3K | ⚡ 100% | 🧠 5% (51K/1M) | 5h 98% (+15%) (20m) | 7d 39% (-3%) (Sun 8:00 AM) | ⏱️ 5m | +150/-30 | 📂 my-project | 🌿 main
 ```
 
 ## Troubleshooting

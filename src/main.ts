@@ -10,31 +10,27 @@ import {
   calculateCacheEfficiency,
   formatCompactNumber,
   formatDuration,
+  prepareStatusLineOutput,
   shortenModelName,
 } from "./format.ts";
 import { getGitInfo } from "./git.ts";
-import { formatRateLimitModule } from "./limits.ts";
+import {
+  FIVE_HOURS_IN_SECONDS,
+  formatRateLimitModule,
+  SEVEN_DAYS_IN_SECONDS,
+} from "./limits.ts";
 import { loadSessionMetrics } from "./session.ts";
+import {
+  ALL_MODULES,
+  formatCacheModule,
+  formatContextModule,
+  type Module,
+  parseModules,
+} from "./status_modules.ts";
 import type { ClaudeContext } from "./types.ts";
 import { getWeather } from "./weather.ts";
 
-export const ALL_MODULES = [
-  "project",
-  "model",
-  "cost",
-  "tokens",
-  "cache",
-  "context",
-  "session",
-  "week",
-  "duration",
-  "lines",
-  "dir",
-  "git",
-  "weather",
-] as const;
-
-export type Module = typeof ALL_MODULES[number];
+export { ALL_MODULES, formatCacheModule, formatContextModule, parseModules };
 
 function parseClaudeContext(input: string): ClaudeContext {
   try {
@@ -48,21 +44,6 @@ interface BuildOptions {
   currency: string;
   location: string | undefined;
   modules: Set<Module> | undefined;
-}
-
-export function parseModules(modules: string): Set<Module> {
-  const names = modules.split(",").map((name) => name.trim());
-  const invalid = names.filter((name) => !ALL_MODULES.includes(name as Module));
-
-  if (invalid.length > 0) {
-    throw new Error(
-      `Invalid module(s): ${invalid.join(", ")}. Valid modules: ${
-        ALL_MODULES.join(", ")
-      }`,
-    );
-  }
-
-  return new Set(names as Module[]);
 }
 
 async function buildStatusLine(options: BuildOptions): Promise<void> {
@@ -160,25 +141,26 @@ async function buildStatusLine(options: BuildOptions): Promise<void> {
       sessionMetrics.cacheReadTokens,
       sessionMetrics.inputTokens,
     );
-    components.push(`⚡ ${efficiency}%`);
+    components.push(formatCacheModule(efficiency));
   }
 
   // Add context usage with limit
   if (show("context")) {
     if (contextTokens) {
-      const currentDisplay = formatCompactNumber(contextTokens.inputTokens);
-      const limitDisplay = formatCompactNumber(contextTokens.contextLimit);
-      components.push(
-        `🧠 ${contextTokens.percentage}% (${currentDisplay}/${limitDisplay})`,
-      );
+      components.push(formatContextModule(contextTokens));
     } else {
-      components.push(`🧠 0%`);
+      components.push(formatContextModule({
+        percentage: 0,
+        inputTokens: 0,
+        contextLimit: 0,
+      }));
     }
   }
 
   if (show("session")) {
     const sessionRateLimit = formatRateLimitModule(
       "5h",
+      FIVE_HOURS_IN_SECONDS,
       rateLimits?.five_hour,
       nowUnixSeconds,
     );
@@ -190,6 +172,7 @@ async function buildStatusLine(options: BuildOptions): Promise<void> {
   if (show("week")) {
     const weeklyRateLimit = formatRateLimitModule(
       "7d",
+      SEVEN_DAYS_IN_SECONDS,
       rateLimits?.seven_day,
       nowUnixSeconds,
     );
@@ -229,7 +212,7 @@ async function buildStatusLine(options: BuildOptions): Promise<void> {
   }
 
   // Join components with separator and output
-  console.log(components.join(" | "));
+  console.log(prepareStatusLineOutput(components.join(" | ")));
 }
 
 if (import.meta.main) {

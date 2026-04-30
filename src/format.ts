@@ -80,3 +80,11 @@ export function shortenModelName(modelName: string): string {
   }
   return capitalizedVariant;
 }
+
+export function emphasizePercentage(text: string): string {
+  return text.replace(/(\d+%)/, "\x1b[37m$1\x1b[39m");
+}
+
+export function prepareStatusLineOutput(text: string): string {
+  return `\x1b[0m${text}`;
+}
