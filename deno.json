@@ -46,11 +46,11 @@
   },
   "tasks": {
     "hooks:install": "deno run --allow-read=deno.json,.git/hooks/ --allow-write=.git/hooks/ jsr:@hongminhee/deno-task-hooks",
-    "hooks:pre-commit": "deno check && deno fmt --check && deno lint",
+    "hooks:pre-commit": "deno check src/ tests/ && deno fmt --check && deno lint",
     "hooks:pre-push": "deno publish --dry-run --allow-dirty"
   },
   "imports": {
-    "ccusage": "npm:ccusage@^17.2.1",
-    "@cliffy/command": "jsr:@cliffy/command@^1.0.0-rc.7"
+    "ccusage": "npm:ccusage@^18.0.11",
+    "@cliffy/command": "jsr:@cliffy/command@^1.0.1"
   }
 }

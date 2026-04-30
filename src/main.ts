@@ -13,17 +13,20 @@ import {
   shortenModelName,
 } from "./format.ts";
 import { getGitInfo } from "./git.ts";
+import { formatRateLimitModule } from "./limits.ts";
 import { loadSessionMetrics } from "./session.ts";
 import type { ClaudeContext } from "./types.ts";
 import { getWeather } from "./weather.ts";
 
-const ALL_MODULES = [
+export const ALL_MODULES = [
   "project",
   "model",
   "cost",
   "tokens",
   "cache",
   "context",
+  "session",
+  "week",
   "duration",
   "lines",
   "dir",
@@ -31,7 +34,7 @@ const ALL_MODULES = [
   "weather",
 ] as const;
 
-type Module = typeof ALL_MODULES[number];
+export type Module = typeof ALL_MODULES[number];
 
 function parseClaudeContext(input: string): ClaudeContext {
   try {
@@ -45,6 +48,21 @@ interface BuildOptions {
   currency: string;
   location: string | undefined;
   modules: Set<Module> | undefined;
+}
+
+export function parseModules(modules: string): Set<Module> {
+  const names = modules.split(",").map((name) => name.trim());
+  const invalid = names.filter((name) => !ALL_MODULES.includes(name as Module));
+
+  if (invalid.length > 0) {
+    throw new Error(
+      `Invalid module(s): ${invalid.join(", ")}. Valid modules: ${
+        ALL_MODULES.join(", ")
+      }`,
+    );
+  }
+
+  return new Set(names as Module[]);
 }
 
 async function buildStatusLine(options: BuildOptions): Promise<void> {
@@ -65,7 +83,9 @@ async function buildStatusLine(options: BuildOptions): Promise<void> {
     workspace: { current_dir: currentDir, project_dir: projectDir },
     cost,
     context_window: contextWindow,
+    rate_limits: rateLimits,
   } = parseClaudeContext(input);
+  const nowUnixSeconds = Math.floor(Date.now() / 1000);
 
   // Load async data in parallel for better performance
   const [sessionMetrics, contextTokens, gitInfo, weatherInfo] = await Promise
@@ -156,6 +176,28 @@ async function buildStatusLine(options: BuildOptions): Promise<void> {
     }
   }
 
+  if (show("session")) {
+    const sessionRateLimit = formatRateLimitModule(
+      "5h",
+      rateLimits?.five_hour,
+      nowUnixSeconds,
+    );
+    if (sessionRateLimit) {
+      components.push(sessionRateLimit);
+    }
+  }
+
+  if (show("week")) {
+    const weeklyRateLimit = formatRateLimitModule(
+      "7d",
+      rateLimits?.seven_day,
+      nowUnixSeconds,
+    );
+    if (weeklyRateLimit) {
+      components.push(weeklyRateLimit);
+    }
+  }
+
   // Add session duration
   if (show("duration") && cost) {
     const durationDisplay = formatDuration(cost.total_duration_ms);
@@ -215,18 +257,7 @@ if (import.meta.main) {
       .action(async (options) => {
         let modules: Set<Module> | undefined;
         if (options.modules) {
-          const names = options.modules.split(",").map((s: string) => s.trim());
-          const invalid = names.filter(
-            (n: string) => !ALL_MODULES.includes(n as Module),
-          );
-          if (invalid.length > 0) {
-            throw new Error(
-              `Invalid module(s): ${invalid.join(", ")}. Valid modules: ${
-                ALL_MODULES.join(", ")
-              }`,
-            );
-          }
-          modules = new Set(names as Module[]);
+          modules = parseModules(options.modules);
         }
         await buildStatusLine({
           currency: options.currency,

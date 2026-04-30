@@ -1,3 +1,8 @@
+export interface RateLimitWindow {
+  used_percentage: number;
+  resets_at: number;
+}
+
 export interface ClaudeContext {
   session_id: string;
   transcript_path: string;
@@ -27,4 +32,8 @@ export interface ClaudeContext {
       remaining_percentage?: number;
     }
     | undefined;
+  rate_limits?: {
+    five_hour?: RateLimitWindow;
+    seven_day?: RateLimitWindow;
+  };
 }

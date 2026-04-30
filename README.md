@@ -60,19 +60,24 @@ You can selectively enable status line modules using the `--modules` / `-m` flag
 
 Available modules:
 
-| Module     | Emoji | Description                        |
-| ---------- | ----- | ---------------------------------- |
-| `project`  | 📁    | Project directory name             |
-| `model`    | 🤖    | AI model name                      |
-| `cost`     | 💰    | Session cost                       |
-| `tokens`   | 📊    | Input/output token counts          |
-| `cache`    | ⚡    | Cache efficiency %                 |
-| `context`  | 🧠    | Context token usage                |
-| `duration` | ⏱️    | Session duration                   |
-| `lines`    | +/-   | Lines added/removed                |
-| `dir`      | 📂    | Current directory                  |
-| `git`      | 🌿    | Git branch                         |
-| `weather`  | icon  | Weather info (requires --location) |
+| Module     | Emoji | Description                                  |
+| ---------- | ----- | -------------------------------------------- |
+| `project`  | 📁    | Project directory name                       |
+| `model`    | 🤖    | AI model name                                |
+| `cost`     | 💰    | Session cost                                 |
+| `tokens`   | 📊    | Input/output token counts                    |
+| `cache`    | ⚡    | Cache efficiency %                           |
+| `context`  | 🧠    | Context token usage                          |
+| `session`  | 5h    | 5-hour session rate-limit usage (subscriber) |
+| `week`     | 7d    | 7-day rate-limit usage (subscriber)          |
+| `duration` | ⏱️    | Session duration                             |
+| `lines`    | +/-   | Lines added/removed                          |
+| `dir`      | 📂    | Current directory                            |
+| `git`      | 🌿    | Git branch                                   |
+| `weather`  | icon  | Weather info (requires --location)           |
+
+`session` and `week` only appear when Claude Code includes the
+subscriber-only `rate_limits` field in stdin.
 
 ## Development
 
@@ -119,8 +124,20 @@ interface ClaudeContext {
       total_input_tokens: number;
       total_output_tokens?: number;
       context_window_size: number;
+      used_percentage?: number;
+      remaining_percentage?: number;
     }
     | undefined;
+  rate_limits?: {
+    five_hour?: {
+      used_percentage: number;
+      resets_at: number;
+    };
+    seven_day?: {
+      used_percentage: number;
+      resets_at: number;
+    };
+  };
 }
 ```
 
@@ -132,6 +149,8 @@ It then builds a status line showing:
 - Input/output token counts
 - Cache efficiency percentage
 - Context token usage with current/limit counts
+- Current 5-hour session rate-limit usage when available to subscribers
+- Current 7-day rate-limit usage when available to subscribers
 - Session duration
 - Lines added/removed
 - Current directory
@@ -149,7 +168,7 @@ The status line tracks your Claude usage by:
 ### Example Output
 
 ```
-🤖 Opus 4.6 | 💰 $5.12 CAD | 📊 984/8.3K | ⚡ 100% | 🧠 5% (51K/1M) | ⏱️ 5m | +150/-30 | 📂 my-project | 🌿 main
+🤖 Opus 4.6 | 💰 $5.12 CAD | 📊 984/8.3K | ⚡ 100% | 🧠 5% (51K/1M) | 5h 98% (20m) | 7d 39% (Sun 8:00 AM) | ⏱️ 5m | +150/-30 | 📂 my-project | 🌿 main
 ```
 
 ## Troubleshooting

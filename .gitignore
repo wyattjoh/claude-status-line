@@ -1,0 +1,7 @@
+# Superpowers plugin install artifacts
+.agents/
+skills-lock.json
+
+# Superpowers planning docs (per global CLAUDE.md)
+docs/superpowers/plans/
+docs/superpowers/specs/
