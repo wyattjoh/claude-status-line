@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.7.0](https://github.com/wyattjoh/claude-status-line/compare/claude-status-line-v0.6.2...claude-status-line-v0.7.0) (2026-05-02)
+
+
+### Features
+
+* add 5h session and 7d week rate-limit modules ([42bb515](https://github.com/wyattjoh/claude-status-line/commit/42bb5156621a3133c14930c33e89cdb57a7b45c4))
+* add pace variance indicator to session and week modules ([7db97ff](https://github.com/wyattjoh/claude-status-line/commit/7db97ffd9641413dee97c7f81ede3d1353ab9145))
+* add rolling burn rate to rate limit modules ([40e3824](https://github.com/wyattjoh/claude-status-line/commit/40e3824efcba5832ba93fe7b12a4cb8170be016f))
+* replace burn rate with hit forecast ([cf7b5fd](https://github.com/wyattjoh/claude-status-line/commit/cf7b5fdd0852ceb62009c8ec1b84b3f269d53444))
+
 ## [0.6.2](https://github.com/wyattjoh/claude-status-line/compare/claude-status-line-v0.6.1...claude-status-line-v0.6.2) (2026-04-02)
 
 
