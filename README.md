@@ -13,7 +13,7 @@ A TypeScript/Deno-based status line for Claude Code that displays project inform
 - 🧠 **Context Usage**: Shows context token percentage with limits
 - 🎨 **Percentage Emphasis**: Always renders percentage values in white for `cache`, `context`, `session`, and `week`
 - 📈 **Pace Variance**: `session` and `week` show how far ahead or behind the linear-interpolation pace you are (e.g. `(+10%)` red when over pace, dim when on or under)
-- 🔥 **Burn Rate**: `session` and `week` can append a rolling 15-minute `%/m` burn rate once enough local history exists
+- 🔥 **Hit Forecast**: `session` and `week` can append a rolling 15-minute `hit in ...` forecast when the recent trend would exhaust the window before reset
 - ⏱️ **Session Duration**: Shows how long the session has been active
 - 📝 **Lines Changed**: Shows lines added/removed during session
 - 🌤️ **Weather**: Shows current weather for a configured location
@@ -94,10 +94,10 @@ between actual `used_percentage` and that expected value is shown in
 parentheses, e.g. `5h 24% (+10%) (20m)`. Positive deltas (over pace) render in
 red; zero or negative deltas (on or under pace) render dim.
 
-When enough local history exists, `session` and `week` also append a rolling
-15-minute burn rate from a small user-config history file, e.g.
-`5h 24% (+10%, +5%/m) (20m)`. Burn rate is hidden until the status line has
-enough recent samples to compute it.
+When enough local history exists, `session` and `week` can also append a
+forecast sourced from the same small user-config history file, e.g.
+`5h 55% (+10%, hit in 45m) (3h 10m)`. The forecast is hidden unless the recent
+trend would exhaust the current window before reset.
 
 ## Development
 
@@ -188,7 +188,7 @@ The status line tracks your Claude usage by:
 ### Example Output
 
 ```
-🤖 Opus 4.6 | 💰 $5.12 CAD | 📊 984/8.3K | ⚡ 100% | 🧠 5% (51K/1M) | 5h 98% (+15%, +5%/m) (20m) | 7d 39% (-3%, +0.4%/m) (Sun 8:00 AM) | ⏱️ 5m | +150/-30 | 📂 my-project | 🌿 main
+🤖 Opus 4.6 | 💰 $5.12 CAD | 📊 984/8.3K | ⚡ 100% | 🧠 5% (51K/1M) | 5h 98% (+15%, hit in 20m) (25m) | 7d 39% (-3%) (Sun 8:00 AM) | ⏱️ 5m | +150/-30 | 📂 my-project | 🌿 main
 ```
 
 ## Troubleshooting

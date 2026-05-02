@@ -134,6 +134,27 @@ export function computeBurnRate(
   return (newest.used_percentage - oldest.used_percentage) / elapsedMinutes;
 }
 
+export function computeTimeToHitSeconds(
+  samples: RateLimitSample[],
+  nowUnixSeconds: number,
+): number | undefined {
+  const burnRate = computeBurnRate(samples);
+  if (burnRate == null || burnRate <= 0) {
+    return undefined;
+  }
+
+  const current = samples[samples.length - 1];
+  const remainingPercentage = 100 - current.used_percentage;
+  if (remainingPercentage <= 0) {
+    return 0;
+  }
+
+  const secondsToHit = Math.round((remainingPercentage / burnRate) * 60);
+  const projectedHitUnixSeconds = nowUnixSeconds + secondsToHit;
+
+  return projectedHitUnixSeconds < current.resets_at ? secondsToHit : undefined;
+}
+
 export async function loadRateLimitHistory(
   filePath: string,
 ): Promise<RateLimitHistory> {

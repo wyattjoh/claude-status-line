@@ -106,7 +106,7 @@ Deno.test("formatRateLimitModule computes 7d weekly pace", () => {
   );
 });
 
-Deno.test("formatRateLimitModule appends integer burn rates", () => {
+Deno.test("formatRateLimitModule appends hit forecast", () => {
   const resetUnixSeconds = 4 * 60 * 60;
 
   assertEquals(
@@ -118,13 +118,13 @@ Deno.test("formatRateLimitModule appends integer burn rates", () => {
         resets_at: resetUnixSeconds,
       },
       0,
-      5,
+      45 * 60,
     ),
-    "5h \x1b[37m50%\x1b[39m \x1b[31m(+30%, +5%/m)\x1b[39m (4h)",
+    "5h \x1b[37m50%\x1b[39m \x1b[31m(+30%, hit in 45m)\x1b[39m (4h)",
   );
 });
 
-Deno.test("formatRateLimitModule appends decimal burn rates", () => {
+Deno.test("formatRateLimitModule appends longer hit forecasts", () => {
   const resetUnixSeconds = 6 * 24 * 60 * 60;
   const resetDisplay = new Intl.DateTimeFormat(undefined, {
     weekday: "short",
@@ -141,13 +141,13 @@ Deno.test("formatRateLimitModule appends decimal burn rates", () => {
         resets_at: resetUnixSeconds,
       },
       0,
-      0.4,
+      (2 * 24 * 60 * 60) + (4 * 60 * 60),
     ),
-    `7d \x1b[37m50%\x1b[39m \x1b[31m(+36%, +0.4%/m)\x1b[39m (${resetDisplay})`,
+    `7d \x1b[37m50%\x1b[39m \x1b[31m(+36%, hit in 52h)\x1b[39m (${resetDisplay})`,
   );
 });
 
-Deno.test("formatRateLimitModule hides burn rate when no history exists", () => {
+Deno.test("formatRateLimitModule hides forecast when none exists", () => {
   const resetUnixSeconds = 4 * 60 * 60;
 
   assertEquals(

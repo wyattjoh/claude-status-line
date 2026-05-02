@@ -21,7 +21,7 @@ import {
 } from "./limits.ts";
 import { loadSessionMetrics } from "./session.ts";
 import {
-  computeBurnRate,
+  computeTimeToHitSeconds,
   createEmptyRateLimitHistory,
   getDefaultRateLimitHistoryPath,
   loadRateLimitHistory,
@@ -127,11 +127,11 @@ async function buildStatusLine(options: BuildOptions): Promise<void> {
       }, nowUnixSeconds)
       : pruneWindowSamples(rateLimitHistory.seven_day, { nowUnixSeconds }),
   };
-  const fiveHourBurnRate = rateLimits?.five_hour
-    ? computeBurnRate(nextRateLimitHistory.five_hour)
+  const fiveHourTimeToHitSeconds = rateLimits?.five_hour
+    ? computeTimeToHitSeconds(nextRateLimitHistory.five_hour, nowUnixSeconds)
     : undefined;
-  const sevenDayBurnRate = rateLimits?.seven_day
-    ? computeBurnRate(nextRateLimitHistory.seven_day)
+  const sevenDayTimeToHitSeconds = rateLimits?.seven_day
+    ? computeTimeToHitSeconds(nextRateLimitHistory.seven_day, nowUnixSeconds)
     : undefined;
 
   if (rateLimitHistoryPath) {
@@ -213,7 +213,7 @@ async function buildStatusLine(options: BuildOptions): Promise<void> {
       FIVE_HOURS_IN_SECONDS,
       rateLimits?.five_hour,
       nowUnixSeconds,
-      fiveHourBurnRate,
+      fiveHourTimeToHitSeconds,
     );
     if (sessionRateLimit) {
       components.push(sessionRateLimit);
@@ -226,7 +226,7 @@ async function buildStatusLine(options: BuildOptions): Promise<void> {
       SEVEN_DAYS_IN_SECONDS,
       rateLimits?.seven_day,
       nowUnixSeconds,
-      sevenDayBurnRate,
+      sevenDayTimeToHitSeconds,
     );
     if (weeklyRateLimit) {
       components.push(weeklyRateLimit);

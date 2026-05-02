@@ -3,6 +3,7 @@ import { join } from "node:path";
 
 import {
   computeBurnRate,
+  computeTimeToHitSeconds,
   getDefaultRateLimitHistoryPath,
   loadRateLimitHistory,
   pruneWindowSamples,
@@ -58,6 +59,36 @@ Deno.test("computeBurnRate returns undefined without enough elapsed time", () =>
       { timestamp: 100, used_percentage: 10, resets_at: 500 },
       { timestamp: 100, used_percentage: 25, resets_at: 500 },
     ]),
+    undefined,
+  );
+});
+
+Deno.test("computeTimeToHitSeconds projects exhaustion before reset", () => {
+  assertEquals(
+    computeTimeToHitSeconds([
+      { timestamp: 0, used_percentage: 40, resets_at: 4_000 },
+      { timestamp: 300, used_percentage: 55, resets_at: 4_000 },
+    ], 300),
+    900,
+  );
+});
+
+Deno.test("computeTimeToHitSeconds hides projections after reset", () => {
+  assertEquals(
+    computeTimeToHitSeconds([
+      { timestamp: 0, used_percentage: 40, resets_at: 1_000 },
+      { timestamp: 300, used_percentage: 41, resets_at: 1_000 },
+    ], 300),
+    undefined,
+  );
+});
+
+Deno.test("computeTimeToHitSeconds hides flat or negative burn", () => {
+  assertEquals(
+    computeTimeToHitSeconds([
+      { timestamp: 0, used_percentage: 55, resets_at: 4_000 },
+      { timestamp: 300, used_percentage: 55, resets_at: 4_000 },
+    ], 300),
     undefined,
   );
 });
