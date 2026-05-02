@@ -106,6 +106,64 @@ Deno.test("formatRateLimitModule computes 7d weekly pace", () => {
   );
 });
 
+Deno.test("formatRateLimitModule appends integer burn rates", () => {
+  const resetUnixSeconds = 4 * 60 * 60;
+
+  assertEquals(
+    formatRateLimitModule(
+      "5h",
+      FIVE_HOURS_IN_SECONDS,
+      {
+        used_percentage: 50,
+        resets_at: resetUnixSeconds,
+      },
+      0,
+      5,
+    ),
+    "5h \x1b[37m50%\x1b[39m \x1b[31m(+30%, +5%/m)\x1b[39m (4h)",
+  );
+});
+
+Deno.test("formatRateLimitModule appends decimal burn rates", () => {
+  const resetUnixSeconds = 6 * 24 * 60 * 60;
+  const resetDisplay = new Intl.DateTimeFormat(undefined, {
+    weekday: "short",
+    hour: "numeric",
+    minute: "2-digit",
+  }).format(new Date(resetUnixSeconds * 1000));
+
+  assertEquals(
+    formatRateLimitModule(
+      "7d",
+      SEVEN_DAYS_IN_SECONDS,
+      {
+        used_percentage: 50,
+        resets_at: resetUnixSeconds,
+      },
+      0,
+      0.4,
+    ),
+    `7d \x1b[37m50%\x1b[39m \x1b[31m(+36%, +0.4%/m)\x1b[39m (${resetDisplay})`,
+  );
+});
+
+Deno.test("formatRateLimitModule hides burn rate when no history exists", () => {
+  const resetUnixSeconds = 4 * 60 * 60;
+
+  assertEquals(
+    formatRateLimitModule(
+      "5h",
+      FIVE_HOURS_IN_SECONDS,
+      {
+        used_percentage: 50,
+        resets_at: resetUnixSeconds,
+      },
+      0,
+    ),
+    "5h \x1b[37m50%\x1b[39m \x1b[31m(+30%)\x1b[39m (4h)",
+  );
+});
+
 Deno.test("formatRateLimitModule omits missing or rolled-over windows", () => {
   assertEquals(
     formatRateLimitModule("7d", SEVEN_DAYS_IN_SECONDS, undefined, 0),

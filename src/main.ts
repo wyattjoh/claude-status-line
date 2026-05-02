@@ -21,6 +21,15 @@ import {
 } from "./limits.ts";
 import { loadSessionMetrics } from "./session.ts";
 import {
+  computeBurnRate,
+  createEmptyRateLimitHistory,
+  getDefaultRateLimitHistoryPath,
+  loadRateLimitHistory,
+  pruneWindowSamples,
+  saveRateLimitHistory,
+  updateWindowSamples,
+} from "./rate_limit_history.ts";
+import {
   ALL_MODULES,
   formatCacheModule,
   formatContextModule,
@@ -67,9 +76,16 @@ async function buildStatusLine(options: BuildOptions): Promise<void> {
     rate_limits: rateLimits,
   } = parseClaudeContext(input);
   const nowUnixSeconds = Math.floor(Date.now() / 1000);
+  const rateLimitHistoryPath = getDefaultRateLimitHistoryPath();
 
   // Load async data in parallel for better performance
-  const [sessionMetrics, contextTokens, gitInfo, weatherInfo] = await Promise
+  const [
+    sessionMetrics,
+    contextTokens,
+    gitInfo,
+    weatherInfo,
+    rateLimitHistory,
+  ] = await Promise
     .all([
       loadSessionMetrics(sessionID),
       contextWindow
@@ -90,7 +106,41 @@ async function buildStatusLine(options: BuildOptions): Promise<void> {
         : calculateContextTokens(transcriptPath, modelID),
       getGitInfo(currentDir),
       options.location ? getWeather(options.location) : Promise.resolve(null),
+      rateLimitHistoryPath
+        ? loadRateLimitHistory(rateLimitHistoryPath)
+        : Promise.resolve(createEmptyRateLimitHistory()),
     ]);
+
+  const nextRateLimitHistory = {
+    five_hour: rateLimits?.five_hour
+      ? updateWindowSamples(rateLimitHistory.five_hour, {
+        timestamp: nowUnixSeconds,
+        used_percentage: rateLimits.five_hour.used_percentage,
+        resets_at: rateLimits.five_hour.resets_at,
+      }, nowUnixSeconds)
+      : pruneWindowSamples(rateLimitHistory.five_hour, { nowUnixSeconds }),
+    seven_day: rateLimits?.seven_day
+      ? updateWindowSamples(rateLimitHistory.seven_day, {
+        timestamp: nowUnixSeconds,
+        used_percentage: rateLimits.seven_day.used_percentage,
+        resets_at: rateLimits.seven_day.resets_at,
+      }, nowUnixSeconds)
+      : pruneWindowSamples(rateLimitHistory.seven_day, { nowUnixSeconds }),
+  };
+  const fiveHourBurnRate = rateLimits?.five_hour
+    ? computeBurnRate(nextRateLimitHistory.five_hour)
+    : undefined;
+  const sevenDayBurnRate = rateLimits?.seven_day
+    ? computeBurnRate(nextRateLimitHistory.seven_day)
+    : undefined;
+
+  if (rateLimitHistoryPath) {
+    try {
+      await saveRateLimitHistory(rateLimitHistoryPath, nextRateLimitHistory);
+    } catch {
+      // Persistence is best-effort and must not break the status line.
+    }
+  }
 
   // Build status line components with icons and separators
   const components: string[] = [];
@@ -163,6 +213,7 @@ async function buildStatusLine(options: BuildOptions): Promise<void> {
       FIVE_HOURS_IN_SECONDS,
       rateLimits?.five_hour,
       nowUnixSeconds,
+      fiveHourBurnRate,
     );
     if (sessionRateLimit) {
       components.push(sessionRateLimit);
@@ -175,6 +226,7 @@ async function buildStatusLine(options: BuildOptions): Promise<void> {
       SEVEN_DAYS_IN_SECONDS,
       rateLimits?.seven_day,
       nowUnixSeconds,
+      sevenDayBurnRate,
     );
     if (weeklyRateLimit) {
       components.push(weeklyRateLimit);

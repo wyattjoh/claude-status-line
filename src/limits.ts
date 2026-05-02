@@ -32,6 +32,7 @@ function formatPaceVariance(
   windowSeconds: number,
   resetUnixSeconds: number,
   nowUnixSeconds: number,
+  burnRate?: number,
 ): string {
   const startSeconds = resetUnixSeconds - windowSeconds;
   const elapsedSeconds = nowUnixSeconds - startSeconds;
@@ -41,7 +42,10 @@ function formatPaceVariance(
   );
   const delta = Math.round(usedPercentage - expectedPercentage);
   const sign = delta >= 0 ? "+" : "";
-  const text = `(${sign}${delta}%)`;
+  const details = burnRate == null
+    ? `${sign}${delta}%`
+    : `${sign}${delta}%, ${formatBurnRate(burnRate)}`;
+  const text = `(${details})`;
 
   if (delta > 0) {
     return `\x1b[31m${text}\x1b[39m`;
@@ -49,11 +53,20 @@ function formatPaceVariance(
   return `\x1b[2m${text}\x1b[22m`;
 }
 
+function formatBurnRate(burnRate: number): string {
+  const roundedValue = Math.abs(burnRate) >= 1
+    ? Math.round(burnRate).toString()
+    : (Math.round(burnRate * 10) / 10).toFixed(1).replace(/\.0$/, "");
+  const sign = burnRate >= 0 ? "+" : "";
+  return `${sign}${roundedValue}%/m`;
+}
+
 export function formatRateLimitModule(
   label: string,
   windowSeconds: number,
   window: RateLimitWindow | undefined,
   nowUnixSeconds: number,
+  burnRate?: number,
 ): string | undefined {
   if (!window) {
     return undefined;
@@ -69,6 +82,7 @@ export function formatRateLimitModule(
     windowSeconds,
     window.resets_at,
     nowUnixSeconds,
+    burnRate,
   );
 
   return emphasizePercentage(
