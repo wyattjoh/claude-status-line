@@ -1,6 +1,9 @@
 import { dirname, join } from "node:path";
 
-export const RATE_LIMIT_HISTORY_RETENTION_SECONDS = 15 * 60;
+export const RATE_LIMIT_HISTORY_RETENTION_FIVE_HOUR_SECONDS = 5 * 60 * 60;
+export const RATE_LIMIT_HISTORY_RETENTION_SEVEN_DAY_SECONDS = 7 * 24 * 60 * 60;
+export const BURN_RATE_WINDOW_FIVE_HOUR_SECONDS = 15 * 60;
+export const BURN_RATE_WINDOW_SEVEN_DAY_SECONDS = 24 * 60 * 60;
 
 export interface RateLimitSample {
   timestamp: number;
@@ -90,13 +93,11 @@ export function pruneWindowSamples(
   samples: RateLimitSample[],
   options: {
     nowUnixSeconds: number;
+    retentionSeconds: number;
     currentResetAt?: number;
-    retentionSeconds?: number;
   },
 ): RateLimitSample[] {
-  const retentionSeconds = options.retentionSeconds ??
-    RATE_LIMIT_HISTORY_RETENTION_SECONDS;
-  const oldestTimestamp = options.nowUnixSeconds - retentionSeconds;
+  const oldestTimestamp = options.nowUnixSeconds - options.retentionSeconds;
 
   return samples.filter((sample) =>
     sample.timestamp >= oldestTimestamp &&
@@ -105,26 +106,77 @@ export function pruneWindowSamples(
   );
 }
 
+export type BucketKeyFn = (sample: RateLimitSample) => string;
+
+export function minuteBucketKey(sample: RateLimitSample): string {
+  return `m:${Math.floor(sample.timestamp / 60)}`;
+}
+
+// Per-minute granularity for samples in the same wall-clock hour as `now`;
+// per-hour granularity for older samples. When the hour rolls over, the
+// previous hour's minute samples collapse into a single hourly bucket on the
+// next compaction.
+export function makeWeekTieredBucketKey(
+  nowUnixSeconds: number,
+): BucketKeyFn {
+  const currentHourIndex = Math.floor(nowUnixSeconds / 3600);
+  return (sample) => {
+    const hourIndex = Math.floor(sample.timestamp / 3600);
+    if (hourIndex === currentHourIndex) {
+      return `m:${Math.floor(sample.timestamp / 60)}`;
+    }
+    return `h:${hourIndex}`;
+  };
+}
+
+export function compactSamples(
+  samples: RateLimitSample[],
+  bucketKey: BucketKeyFn,
+): RateLimitSample[] {
+  const buckets = new Map<string, RateLimitSample>();
+  for (const sample of samples) {
+    const key = bucketKey(sample);
+    const existing = buckets.get(key);
+    if (!existing || sample.timestamp > existing.timestamp) {
+      buckets.set(key, sample);
+    }
+  }
+
+  return [...buckets.values()].sort((a, b) => a.timestamp - b.timestamp);
+}
+
 export function updateWindowSamples(
   samples: RateLimitSample[],
   sample: RateLimitSample,
   nowUnixSeconds: number,
+  retentionSeconds: number,
+  bucketKey: BucketKeyFn,
 ): RateLimitSample[] {
-  return pruneWindowSamples([...samples, sample], {
+  const pruned = pruneWindowSamples([...samples, sample], {
     nowUnixSeconds,
+    retentionSeconds,
     currentResetAt: sample.resets_at,
-  }).sort((a, b) => a.timestamp - b.timestamp);
+  });
+  return compactSamples(pruned, bucketKey);
 }
 
 export function computeBurnRate(
   samples: RateLimitSample[],
+  windowOptions?: { nowUnixSeconds: number; windowSeconds: number },
 ): number | undefined {
-  if (samples.length < 2) {
+  const effective = windowOptions
+    ? samples.filter((sample) =>
+      sample.timestamp >=
+        windowOptions.nowUnixSeconds - windowOptions.windowSeconds
+    )
+    : samples;
+
+  if (effective.length < 2) {
     return undefined;
   }
 
-  const oldest = samples[0];
-  const newest = samples[samples.length - 1];
+  const oldest = effective[0];
+  const newest = effective[effective.length - 1];
   const elapsedMinutes = (newest.timestamp - oldest.timestamp) / 60;
 
   if (elapsedMinutes <= 0) {
@@ -137,8 +189,14 @@ export function computeBurnRate(
 export function computeTimeToHitSeconds(
   samples: RateLimitSample[],
   nowUnixSeconds: number,
+  burnRateWindowSeconds?: number,
 ): number | undefined {
-  const burnRate = computeBurnRate(samples);
+  const burnRate = burnRateWindowSeconds != null
+    ? computeBurnRate(samples, {
+      nowUnixSeconds,
+      windowSeconds: burnRateWindowSeconds,
+    })
+    : computeBurnRate(samples);
   if (burnRate == null || burnRate <= 0) {
     return undefined;
   }
