@@ -52,6 +52,20 @@ function parseClaudeContext(input: string): ClaudeContext {
   }
 }
 
+async function timed<T>(
+  work: () => Promise<T>,
+): Promise<readonly [T, number]> {
+  const start = performance.now();
+  const value = await work();
+  return [value, performance.now() - start] as const;
+}
+
+function cacheIcon(ms: number): string {
+  if (ms < 5) return "🔥";
+  if (ms < 50) return "🌡️";
+  return "🧊";
+}
+
 interface BuildOptions {
   currency: string;
   location: string | undefined;
@@ -99,39 +113,47 @@ async function buildStatusLine(options: BuildOptions): Promise<void> {
 
   // Load async data in parallel for better performance
   const [
-    sessionMetrics,
-    contextTokens,
-    gitInfo,
-    weatherInfo,
-    rateLimitHistory,
+    [sessionMetrics, sessionMetricsMs],
+    [contextTokens, contextTokensMs],
+    [gitInfo, gitInfoMs],
+    [weatherInfo, weatherInfoMs],
+    [rateLimitHistory, rateLimitHistoryMs],
   ] = await Promise
     .all([
-      needSessionMetrics
-        ? loadSessionMetrics(sessionID)
-        : Promise.resolve(undefined),
-      contextWindow
-        ? Promise.resolve({
-          inputTokens: contextWindow.used_percentage != null
-            ? Math.round(
-              (contextWindow.used_percentage / 100) *
-                contextWindow.context_window_size,
-            )
-            : contextWindow.total_input_tokens,
-          percentage: contextWindow.used_percentage ??
-            Math.round(
-              (contextWindow.total_input_tokens /
-                contextWindow.context_window_size) * 100,
-            ),
-          contextLimit: contextWindow.context_window_size,
-        })
-        : loadContextTokensFromTranscript(transcriptPath, modelID),
-      needGit ? getGitInfo(currentDir) : Promise.resolve(null),
-      needWeather && options.location
-        ? getWeather(options.location)
-        : Promise.resolve(null),
-      needRateLimits && rateLimitHistoryPath
-        ? loadRateLimitHistory(rateLimitHistoryPath)
-        : Promise.resolve(createEmptyRateLimitHistory()),
+      timed(() =>
+        needSessionMetrics
+          ? loadSessionMetrics(sessionID)
+          : Promise.resolve(undefined)
+      ),
+      timed(() =>
+        contextWindow
+          ? Promise.resolve({
+            inputTokens: contextWindow.used_percentage != null
+              ? Math.round(
+                (contextWindow.used_percentage / 100) *
+                  contextWindow.context_window_size,
+              )
+              : contextWindow.total_input_tokens,
+            percentage: contextWindow.used_percentage ??
+              Math.round(
+                (contextWindow.total_input_tokens /
+                  contextWindow.context_window_size) * 100,
+              ),
+            contextLimit: contextWindow.context_window_size,
+          })
+          : loadContextTokensFromTranscript(transcriptPath, modelID)
+      ),
+      timed(() => needGit ? getGitInfo(currentDir) : Promise.resolve(null)),
+      timed(() =>
+        needWeather && options.location
+          ? getWeather(options.location)
+          : Promise.resolve(null)
+      ),
+      timed(() =>
+        needRateLimits && rateLimitHistoryPath
+          ? loadRateLimitHistory(rateLimitHistoryPath)
+          : Promise.resolve(createEmptyRateLimitHistory())
+      ),
     ]);
 
   const nextRateLimitHistory = needRateLimits
@@ -169,36 +191,46 @@ async function buildStatusLine(options: BuildOptions): Promise<void> {
 
   // Build status line components with icons and separators
   const components: string[] = [];
+  const debugActive = show("debug");
+  const decorate = (ms: number, content: string) =>
+    debugActive ? `${cacheIcon(ms)} ${content}` : content;
 
   // Get project name if available
   if (show("project") && projectDir && projectDir !== currentDir) {
-    components.push(`📁 ${basename(projectDir)}`);
+    components.push(decorate(0, `📁 ${basename(projectDir)}`));
   }
 
   // Add AI model with icon - show multiple models if used
   if (show("model")) {
     if (sessionMetrics && sessionMetrics.modelsUsed.length > 1) {
       const shortNames = sessionMetrics.modelsUsed.map(shortenModelName);
-      components.push(`🤖 ${shortNames.join("+")}`);
+      components.push(
+        decorate(sessionMetricsMs, `🤖 ${shortNames.join("+")}`),
+      );
     } else {
-      components.push(`🤖 ${modelName}`);
+      components.push(decorate(0, `🤖 ${modelName}`));
     }
   }
 
   // Add session cost with currency code
   if (show("cost")) {
+    let display: string | null = null;
+    let costMs = 0;
     if (cost) {
-      const sessionDisplay = await formatCurrency(
-        cost.total_cost_usd,
-        options.currency,
+      const [value, ms] = await timed(() =>
+        formatCurrency(cost.total_cost_usd, options.currency)
       );
-      components.push(`💰 ${sessionDisplay} ${options.currency}`);
+      display = value;
+      costMs = ms;
     } else if (sessionMetrics) {
-      const sessionDisplay = await formatCurrency(
-        sessionMetrics.totalCost,
-        options.currency,
+      const [value, ms] = await timed(() =>
+        formatCurrency(sessionMetrics.totalCost, options.currency)
       );
-      components.push(`💰 ${sessionDisplay} ${options.currency}`);
+      display = value;
+      costMs = ms + sessionMetricsMs;
+    }
+    if (display !== null) {
+      components.push(decorate(costMs, `💰 ${display} ${options.currency}`));
     }
   }
 
@@ -206,7 +238,9 @@ async function buildStatusLine(options: BuildOptions): Promise<void> {
   if (show("tokens") && sessionMetrics) {
     const inputDisplay = formatCompactNumber(sessionMetrics.inputTokens);
     const outputDisplay = formatCompactNumber(sessionMetrics.outputTokens);
-    components.push(`📊 ${inputDisplay}/${outputDisplay}`);
+    components.push(
+      decorate(sessionMetricsMs, `📊 ${inputDisplay}/${outputDisplay}`),
+    );
   }
 
   // Add cache efficiency
@@ -215,20 +249,17 @@ async function buildStatusLine(options: BuildOptions): Promise<void> {
       sessionMetrics.cacheReadTokens,
       sessionMetrics.inputTokens,
     );
-    components.push(formatCacheModule(efficiency));
+    components.push(decorate(sessionMetricsMs, formatCacheModule(efficiency)));
   }
 
   // Add context usage with limit
   if (show("context")) {
-    if (contextTokens) {
-      components.push(formatContextModule(contextTokens));
-    } else {
-      components.push(formatContextModule({
-        percentage: 0,
-        inputTokens: 0,
-        contextLimit: 0,
-      }));
-    }
+    const tokens = contextTokens ?? {
+      percentage: 0,
+      inputTokens: 0,
+      contextLimit: 0,
+    };
+    components.push(decorate(contextTokensMs, formatContextModule(tokens)));
   }
 
   if (show("session")) {
@@ -240,7 +271,7 @@ async function buildStatusLine(options: BuildOptions): Promise<void> {
       fiveHourTimeToHitSeconds,
     );
     if (sessionRateLimit) {
-      components.push(sessionRateLimit);
+      components.push(decorate(rateLimitHistoryMs, sessionRateLimit));
     }
   }
 
@@ -253,14 +284,14 @@ async function buildStatusLine(options: BuildOptions): Promise<void> {
       sevenDayTimeToHitSeconds,
     );
     if (weeklyRateLimit) {
-      components.push(weeklyRateLimit);
+      components.push(decorate(rateLimitHistoryMs, weeklyRateLimit));
     }
   }
 
   // Add session duration
   if (show("duration") && cost) {
     const durationDisplay = formatDuration(cost.total_duration_ms);
-    components.push(`⏱️ ${durationDisplay}`);
+    components.push(decorate(0, `⏱️ ${durationDisplay}`));
   }
 
   // Add lines changed
@@ -268,27 +299,34 @@ async function buildStatusLine(options: BuildOptions): Promise<void> {
     show("lines") && cost &&
     (cost.total_lines_added > 0 || cost.total_lines_removed > 0)
   ) {
-    components.push(`+${cost.total_lines_added}/-${cost.total_lines_removed}`);
+    components.push(
+      decorate(0, `+${cost.total_lines_added}/-${cost.total_lines_removed}`),
+    );
   }
 
   // Get just the directory name for cleaner display
   if (show("dir")) {
     const dirName = currentDir ? basename(currentDir) : "~";
-    components.push(`📂 ${dirName}`);
+    components.push(decorate(0, `📂 ${dirName}`));
   }
 
   // Add git branch if available
   if (show("git") && gitInfo) {
-    components.push(`🌿 ${gitInfo.branch}`);
+    components.push(decorate(gitInfoMs, `🌿 ${gitInfo.branch}`));
   }
 
   // Add weather if available
   if (show("weather") && weatherInfo) {
-    components.push(`${weatherInfo.icon} ${weatherInfo.temperature}°C`);
+    components.push(
+      decorate(
+        weatherInfoMs,
+        `${weatherInfo.icon} ${weatherInfo.temperature}°C`,
+      ),
+    );
   }
 
   // Render debug last so it captures the time spent on every other widget.
-  if (show("debug")) {
+  if (debugActive) {
     const elapsedMs = Math.round(performance.now() - startedAtMs);
     components.push(`🐞 ${elapsedMs}ms`);
   }
