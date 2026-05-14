@@ -1,8 +1,6 @@
 import { basename } from "node:path";
 import process from "node:process";
 import { Buffer } from "node:buffer";
-import { logger } from "ccusage/logger";
-import { calculateContextTokens } from "ccusage/data-loader";
 import { Command } from "@cliffy/command";
 
 import { formatCurrency } from "./currency.ts";
@@ -21,7 +19,10 @@ import {
   formatRateLimitModule,
   SEVEN_DAYS_IN_SECONDS,
 } from "./limits.ts";
-import { loadSessionMetrics } from "./session.ts";
+import {
+  loadContextTokensFromTranscript,
+  loadSessionMetrics,
+} from "./session.ts";
 import {
   computeTimeToHitSeconds,
   createEmptyRateLimitHistory,
@@ -58,9 +59,6 @@ interface BuildOptions {
 }
 
 async function buildStatusLine(options: BuildOptions): Promise<void> {
-  // Disable logging from ccusage.
-  logger.removeReporter();
-
   // Read Claude Code context from stdin
   const chunks: Buffer[] = [];
   for await (const chunk of process.stdin) {
@@ -80,6 +78,16 @@ async function buildStatusLine(options: BuildOptions): Promise<void> {
   const nowUnixSeconds = Math.floor(Date.now() / 1000);
   const rateLimitHistoryPath = getDefaultRateLimitHistoryPath();
 
+  const show = (name: Module) => !options.modules || options.modules.has(name);
+
+  // Session metrics requires scanning the transcript via ccusage (~115ms +
+  // ~65ms cold-import cost). Skip it when no displayed module depends on it.
+  const needSessionMetrics = show("tokens") ||
+    show("cache") ||
+    (show("cost") && !cost);
+  const needRateLimits = show("session") || show("week");
+  const needGit = show("git");
+
   // Load async data in parallel for better performance
   const [
     sessionMetrics,
@@ -89,7 +97,9 @@ async function buildStatusLine(options: BuildOptions): Promise<void> {
     rateLimitHistory,
   ] = await Promise
     .all([
-      loadSessionMetrics(sessionID),
+      needSessionMetrics
+        ? loadSessionMetrics(sessionID)
+        : Promise.resolve(undefined),
       contextWindow
         ? Promise.resolve({
           inputTokens: contextWindow.used_percentage != null
@@ -105,38 +115,40 @@ async function buildStatusLine(options: BuildOptions): Promise<void> {
             ),
           contextLimit: contextWindow.context_window_size,
         })
-        : calculateContextTokens(transcriptPath, modelID),
-      getGitInfo(currentDir),
+        : loadContextTokensFromTranscript(transcriptPath, modelID),
+      needGit ? getGitInfo(currentDir) : Promise.resolve(null),
       options.location ? getWeather(options.location) : Promise.resolve(null),
-      rateLimitHistoryPath
+      needRateLimits && rateLimitHistoryPath
         ? loadRateLimitHistory(rateLimitHistoryPath)
         : Promise.resolve(createEmptyRateLimitHistory()),
     ]);
 
-  const nextRateLimitHistory = {
-    five_hour: rateLimits?.five_hour
-      ? updateWindowSamples(rateLimitHistory.five_hour, {
-        timestamp: nowUnixSeconds,
-        used_percentage: rateLimits.five_hour.used_percentage,
-        resets_at: rateLimits.five_hour.resets_at,
-      }, nowUnixSeconds)
-      : pruneWindowSamples(rateLimitHistory.five_hour, { nowUnixSeconds }),
-    seven_day: rateLimits?.seven_day
-      ? updateWindowSamples(rateLimitHistory.seven_day, {
-        timestamp: nowUnixSeconds,
-        used_percentage: rateLimits.seven_day.used_percentage,
-        resets_at: rateLimits.seven_day.resets_at,
-      }, nowUnixSeconds)
-      : pruneWindowSamples(rateLimitHistory.seven_day, { nowUnixSeconds }),
-  };
-  const fiveHourTimeToHitSeconds = rateLimits?.five_hour
+  const nextRateLimitHistory = needRateLimits
+    ? {
+      five_hour: rateLimits?.five_hour
+        ? updateWindowSamples(rateLimitHistory.five_hour, {
+          timestamp: nowUnixSeconds,
+          used_percentage: rateLimits.five_hour.used_percentage,
+          resets_at: rateLimits.five_hour.resets_at,
+        }, nowUnixSeconds)
+        : pruneWindowSamples(rateLimitHistory.five_hour, { nowUnixSeconds }),
+      seven_day: rateLimits?.seven_day
+        ? updateWindowSamples(rateLimitHistory.seven_day, {
+          timestamp: nowUnixSeconds,
+          used_percentage: rateLimits.seven_day.used_percentage,
+          resets_at: rateLimits.seven_day.resets_at,
+        }, nowUnixSeconds)
+        : pruneWindowSamples(rateLimitHistory.seven_day, { nowUnixSeconds }),
+    }
+    : rateLimitHistory;
+  const fiveHourTimeToHitSeconds = needRateLimits && rateLimits?.five_hour
     ? computeTimeToHitSeconds(nextRateLimitHistory.five_hour, nowUnixSeconds)
     : undefined;
-  const sevenDayTimeToHitSeconds = rateLimits?.seven_day
+  const sevenDayTimeToHitSeconds = needRateLimits && rateLimits?.seven_day
     ? computeTimeToHitSeconds(nextRateLimitHistory.seven_day, nowUnixSeconds)
     : undefined;
 
-  if (rateLimitHistoryPath) {
+  if (needRateLimits && rateLimitHistoryPath) {
     try {
       await saveRateLimitHistory(rateLimitHistoryPath, nextRateLimitHistory);
     } catch {
@@ -146,7 +158,6 @@ async function buildStatusLine(options: BuildOptions): Promise<void> {
 
   // Build status line components with icons and separators
   const components: string[] = [];
-  const show = (name: Module) => !options.modules || options.modules.has(name);
 
   // Get project name if available
   if (show("project") && projectDir && projectDir !== currentDir) {

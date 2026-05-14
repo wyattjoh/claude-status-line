@@ -1,4 +1,3 @@
-import { loadSessionUsageById } from "ccusage/data-loader";
 import {
   aggregateSessionMetrics,
   type SessionMetrics,
@@ -6,12 +5,20 @@ import {
 
 export { aggregateSessionMetrics } from "./session_metrics.ts";
 
-/**
- * Loads session usage data and aggregates metrics.
- */
+let ccusageQuieted = false;
+
+async function silenceCcusageLogger(): Promise<void> {
+  if (ccusageQuieted) return;
+  const { logger } = await import("ccusage/logger");
+  logger.removeReporter();
+  ccusageQuieted = true;
+}
+
 export async function loadSessionMetrics(
   sessionId: string,
 ): Promise<SessionMetrics | undefined> {
+  await silenceCcusageLogger();
+  const { loadSessionUsageById } = await import("ccusage/data-loader");
   const sessionUsage = await loadSessionUsageById(sessionId, {
     mode: "auto",
     offline: false,
@@ -22,4 +29,19 @@ export async function loadSessionMetrics(
   }
 
   return aggregateSessionMetrics(sessionUsage.totalCost, sessionUsage.entries);
+}
+
+export async function loadContextTokensFromTranscript(
+  transcriptPath: string,
+  modelId: string,
+): Promise<
+  {
+    inputTokens: number;
+    percentage: number;
+    contextLimit: number;
+  } | null
+> {
+  await silenceCcusageLogger();
+  const { calculateContextTokens } = await import("ccusage/data-loader");
+  return calculateContextTokens(transcriptPath, modelId);
 }
