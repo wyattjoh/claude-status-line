@@ -59,6 +59,15 @@ interface BuildOptions {
 }
 
 async function buildStatusLine(options: BuildOptions): Promise<void> {
+  const show = (name: Module) => !options.modules || options.modules.has(name);
+
+  if (options.location && !show("weather")) {
+    throw new Error(
+      "--location is set but the 'weather' module is not enabled. " +
+        "Add 'weather' to --modules or remove --location.",
+    );
+  }
+
   // Read Claude Code context from stdin
   const chunks: Buffer[] = [];
   for await (const chunk of process.stdin) {
@@ -78,8 +87,6 @@ async function buildStatusLine(options: BuildOptions): Promise<void> {
   const nowUnixSeconds = Math.floor(Date.now() / 1000);
   const rateLimitHistoryPath = getDefaultRateLimitHistoryPath();
 
-  const show = (name: Module) => !options.modules || options.modules.has(name);
-
   // Session metrics requires scanning the transcript via ccusage (~115ms +
   // ~65ms cold-import cost). Skip it when no displayed module depends on it.
   const needSessionMetrics = show("tokens") ||
@@ -87,6 +94,7 @@ async function buildStatusLine(options: BuildOptions): Promise<void> {
     (show("cost") && !cost);
   const needRateLimits = show("session") || show("week");
   const needGit = show("git");
+  const needWeather = options.location !== undefined && show("weather");
 
   // Load async data in parallel for better performance
   const [
@@ -117,7 +125,9 @@ async function buildStatusLine(options: BuildOptions): Promise<void> {
         })
         : loadContextTokensFromTranscript(transcriptPath, modelID),
       needGit ? getGitInfo(currentDir) : Promise.resolve(null),
-      options.location ? getWeather(options.location) : Promise.resolve(null),
+      needWeather && options.location
+        ? getWeather(options.location)
+        : Promise.resolve(null),
       needRateLimits && rateLimitHistoryPath
         ? loadRateLimitHistory(rateLimitHistoryPath)
         : Promise.resolve(createEmptyRateLimitHistory()),
