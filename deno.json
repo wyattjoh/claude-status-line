@@ -1,6 +1,6 @@
 {
   "name": "@wyattjoh/claude-status-line",
-  "version": "0.6.2",
+  "version": "0.7.0",
   "description": "A status line for Claude Code",
   "license": "MIT",
   "exports": {
