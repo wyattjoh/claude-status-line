@@ -59,6 +59,7 @@ interface BuildOptions {
 }
 
 async function buildStatusLine(options: BuildOptions): Promise<void> {
+  const startedAtMs = performance.now();
   const show = (name: Module) => !options.modules || options.modules.has(name);
 
   if (options.location && !show("weather")) {
@@ -284,6 +285,12 @@ async function buildStatusLine(options: BuildOptions): Promise<void> {
   // Add weather if available
   if (show("weather") && weatherInfo) {
     components.push(`${weatherInfo.icon} ${weatherInfo.temperature}°C`);
+  }
+
+  // Render debug last so it captures the time spent on every other widget.
+  if (show("debug")) {
+    const elapsedMs = Math.round(performance.now() - startedAtMs);
+    components.push(`🐞 ${elapsedMs}ms`);
   }
 
   // Wrap components across lines when the terminal width is known; otherwise
