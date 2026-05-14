@@ -13,7 +13,7 @@ A TypeScript/Deno-based status line for Claude Code that displays project inform
 - 🧠 **Context Usage**: Shows context token percentage with limits
 - 🎨 **Percentage Emphasis**: Always renders percentage values in white for `cache`, `context`, `session`, and `week`
 - 📈 **Pace Variance**: `session` and `week` show how far ahead or behind the linear-interpolation pace you are (e.g. `(+10%)` red when over pace, dim when on or under)
-- 🔥 **Hit Forecast**: `session` and `week` can append a rolling 15-minute `hit in ...` forecast when the recent trend would exhaust the window before reset
+- 🔥 **Hit Forecast**: `session` and `week` can append a `hit in ...` forecast when the recent trend would exhaust the window before reset (5h burn rate sampled over 15 minutes, 7d burn rate sampled over 24 hours so daily lulls are reflected)
 - ⏱️ **Session Duration**: Shows how long the session has been active
 - 📝 **Lines Changed**: Shows lines added/removed during session
 - 🌤️ **Weather**: Shows current weather for a configured location
@@ -97,7 +97,10 @@ red; zero or negative deltas (on or under pace) render dim.
 When enough local history exists, `session` and `week` can also append a
 forecast sourced from the same small user-config history file, e.g.
 `5h 55% (+10%, hit in 45m) (3h 10m)`. The forecast is hidden unless the recent
-trend would exhaust the current window before reset.
+trend would exhaust the current window before reset. The 5h forecast uses the
+last 15 minutes of samples (current pace); the 7d forecast uses the last 24
+hours so daily lulls (sleep, breaks) flatten the burn rate into something that
+better represents your actual day-to-day pace.
 
 ## Development
 

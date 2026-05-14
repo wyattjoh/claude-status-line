@@ -24,11 +24,18 @@ import {
   loadSessionMetrics,
 } from "./session.ts";
 import {
+  BURN_RATE_WINDOW_FIVE_HOUR_SECONDS,
+  BURN_RATE_WINDOW_SEVEN_DAY_SECONDS,
+  compactSamples,
   computeTimeToHitSeconds,
   createEmptyRateLimitHistory,
   getDefaultRateLimitHistoryPath,
   loadRateLimitHistory,
+  makeWeekTieredBucketKey,
+  minuteBucketKey,
   pruneWindowSamples,
+  RATE_LIMIT_HISTORY_RETENTION_FIVE_HOUR_SECONDS,
+  RATE_LIMIT_HISTORY_RETENTION_SEVEN_DAY_SECONDS,
   saveRateLimitHistory,
   updateWindowSamples,
 } from "./rate_limit_history.ts";
@@ -156,29 +163,62 @@ async function buildStatusLine(options: BuildOptions): Promise<void> {
       ),
     ]);
 
+  const sevenDayBucketKey = makeWeekTieredBucketKey(nowUnixSeconds);
   const nextRateLimitHistory = needRateLimits
     ? {
       five_hour: rateLimits?.five_hour
-        ? updateWindowSamples(rateLimitHistory.five_hour, {
-          timestamp: nowUnixSeconds,
-          used_percentage: rateLimits.five_hour.used_percentage,
-          resets_at: rateLimits.five_hour.resets_at,
-        }, nowUnixSeconds)
-        : pruneWindowSamples(rateLimitHistory.five_hour, { nowUnixSeconds }),
+        ? updateWindowSamples(
+          rateLimitHistory.five_hour,
+          {
+            timestamp: nowUnixSeconds,
+            used_percentage: rateLimits.five_hour.used_percentage,
+            resets_at: rateLimits.five_hour.resets_at,
+          },
+          nowUnixSeconds,
+          RATE_LIMIT_HISTORY_RETENTION_FIVE_HOUR_SECONDS,
+          minuteBucketKey,
+        )
+        : compactSamples(
+          pruneWindowSamples(rateLimitHistory.five_hour, {
+            nowUnixSeconds,
+            retentionSeconds: RATE_LIMIT_HISTORY_RETENTION_FIVE_HOUR_SECONDS,
+          }),
+          minuteBucketKey,
+        ),
       seven_day: rateLimits?.seven_day
-        ? updateWindowSamples(rateLimitHistory.seven_day, {
-          timestamp: nowUnixSeconds,
-          used_percentage: rateLimits.seven_day.used_percentage,
-          resets_at: rateLimits.seven_day.resets_at,
-        }, nowUnixSeconds)
-        : pruneWindowSamples(rateLimitHistory.seven_day, { nowUnixSeconds }),
+        ? updateWindowSamples(
+          rateLimitHistory.seven_day,
+          {
+            timestamp: nowUnixSeconds,
+            used_percentage: rateLimits.seven_day.used_percentage,
+            resets_at: rateLimits.seven_day.resets_at,
+          },
+          nowUnixSeconds,
+          RATE_LIMIT_HISTORY_RETENTION_SEVEN_DAY_SECONDS,
+          sevenDayBucketKey,
+        )
+        : compactSamples(
+          pruneWindowSamples(rateLimitHistory.seven_day, {
+            nowUnixSeconds,
+            retentionSeconds: RATE_LIMIT_HISTORY_RETENTION_SEVEN_DAY_SECONDS,
+          }),
+          sevenDayBucketKey,
+        ),
     }
     : rateLimitHistory;
   const fiveHourTimeToHitSeconds = needRateLimits && rateLimits?.five_hour
-    ? computeTimeToHitSeconds(nextRateLimitHistory.five_hour, nowUnixSeconds)
+    ? computeTimeToHitSeconds(
+      nextRateLimitHistory.five_hour,
+      nowUnixSeconds,
+      BURN_RATE_WINDOW_FIVE_HOUR_SECONDS,
+    )
     : undefined;
   const sevenDayTimeToHitSeconds = needRateLimits && rateLimits?.seven_day
-    ? computeTimeToHitSeconds(nextRateLimitHistory.seven_day, nowUnixSeconds)
+    ? computeTimeToHitSeconds(
+      nextRateLimitHistory.seven_day,
+      nowUnixSeconds,
+      BURN_RATE_WINDOW_SEVEN_DAY_SECONDS,
+    )
     : undefined;
 
   if (needRateLimits && rateLimitHistoryPath) {
@@ -328,7 +368,14 @@ async function buildStatusLine(options: BuildOptions): Promise<void> {
   // Render debug last so it captures the time spent on every other widget.
   if (debugActive) {
     const elapsedMs = Math.round(performance.now() - startedAtMs);
-    components.push(`🐞 ${elapsedMs}ms`);
+    const debugParts = [`${elapsedMs}ms`];
+    if (show("session")) {
+      debugParts.push(`5h:${nextRateLimitHistory.five_hour.length}`);
+    }
+    if (show("week")) {
+      debugParts.push(`7d:${nextRateLimitHistory.seven_day.length}`);
+    }
+    components.push(`🐞 ${debugParts.join(" ")}`);
   }
 
   // Wrap components across lines when the terminal width is known; otherwise
