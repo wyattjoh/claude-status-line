@@ -1,5 +1,20 @@
 # Changelog
 
+## [0.8.0](https://github.com/wyattjoh/claude-status-line/compare/claude-status-line-v0.7.0...claude-status-line-v0.8.0) (2026-05-14)
+
+
+### Features
+
+* add debug module showing total widget render time ([0c979d8](https://github.com/wyattjoh/claude-status-line/commit/0c979d85d90fee4da8d69cdf7cad8f5749a101a8))
+* add debug status-line module with cache-state icons ([87e4845](https://github.com/wyattjoh/claude-status-line/commit/87e48457cbff3d263fe5b8bcf04fb0f948e5a61b))
+* annotate each widget with a cache-state icon under debug ([8fa62fb](https://github.com/wyattjoh/claude-status-line/commit/8fa62fb8e3378cc83212e2f2e2959138bd2f88b2))
+* error when --location is set but weather module is disabled ([9304373](https://github.com/wyattjoh/claude-status-line/commit/93043731f4d2dc39502bf332ec4e048fec2d565f))
+
+
+### Performance Improvements
+
+* gate ccusage, git, and rate-limit work on requested modules ([7b5a295](https://github.com/wyattjoh/claude-status-line/commit/7b5a2956d0e87656e4a07a832e62d7679b535f20))
+
 ## [0.7.0](https://github.com/wyattjoh/claude-status-line/compare/claude-status-line-v0.6.2...claude-status-line-v0.7.0) (2026-05-14)
 
 
