@@ -10,10 +10,12 @@ import {
   calculateCacheEfficiency,
   formatCompactNumber,
   formatDuration,
+  packComponentsIntoLines,
   prepareStatusLineOutput,
   shortenModelName,
 } from "./format.ts";
 import { getGitInfo } from "./git.ts";
+import { getTerminalWidth } from "./terminal.ts";
 import {
   FIVE_HOURS_IN_SECONDS,
   formatRateLimitModule,
@@ -263,8 +265,16 @@ async function buildStatusLine(options: BuildOptions): Promise<void> {
     components.push(`${weatherInfo.icon} ${weatherInfo.temperature}°C`);
   }
 
-  // Join components with separator and output
-  console.log(prepareStatusLineOutput(components.join(" | ")));
+  // Wrap components across lines when the terminal width is known; otherwise
+  // emit a single line and let the terminal handle any wrapping.
+  const separator = " | ";
+  const terminalWidth = getTerminalWidth();
+  const lines = terminalWidth
+    ? packComponentsIntoLines(components, separator, terminalWidth)
+    : [components.join(separator)];
+  for (const line of lines) {
+    console.log(prepareStatusLineOutput(line));
+  }
 }
 
 if (import.meta.main) {
