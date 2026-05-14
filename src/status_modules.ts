@@ -14,6 +14,7 @@ export const ALL_MODULES = [
   "dir",
   "git",
   "weather",
+  "debug",
 ] as const;
 
 export type Module = typeof ALL_MODULES[number];
