@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.9.0](https://github.com/wyattjoh/claude-status-line/compare/claude-status-line-v0.8.0...claude-status-line-v0.9.0) (2026-05-14)
+
+
+### Features
+
+* **rate-limits:** retain full session/week history with tiered compaction ([b6779cf](https://github.com/wyattjoh/claude-status-line/commit/b6779cf97af22ec31975ae60df2b1aa065906401))
+* **rate-limits:** retain full session/week history with tiered compaction ([6ec59c4](https://github.com/wyattjoh/claude-status-line/commit/6ec59c48ca6d1f5a61b6b1ab1ea85d60cedbacd8))
+
 ## [0.8.0](https://github.com/wyattjoh/claude-status-line/compare/claude-status-line-v0.7.0...claude-status-line-v0.8.0) (2026-05-14)
 
 
