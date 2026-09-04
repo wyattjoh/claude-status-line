@@ -67,6 +67,7 @@ Available modules:
 | ---------- | ----- | -------------------------------------------- |
 | `project`  | 📁    | Project directory name                       |
 | `model`    | 🤖    | AI model name                                |
+| `effort`   | ( )   | Effort level after the model name            |
 | `cost`     | 💰    | Session cost                                 |
 | `tokens`   | 📊    | Input/output token counts                    |
 | `cache`    | ⚡    | Cache efficiency %                           |
@@ -81,6 +82,12 @@ Available modules:
 
 `session` and `week` only appear when Claude Code includes the
 subscriber-only `rate_limits` field in stdin.
+
+`effort` appends the current reasoning effort in brackets after the model
+name, e.g. `🤖 Opus 4.6 (high)`, and only appears when both `model` is enabled
+and Claude Code reports `effort.level`. The level is colored by intensity:
+blue for `low`, cyan for `medium`, green for `high`, yellow for `xhigh`, and
+red for `max`.
 
 The percentage value inside `cache`, `context`, `session`, and `week` is always
 emphasized in white using ANSI escape sequences, and the rendered status line
@@ -151,6 +158,9 @@ interface ClaudeContext {
       remaining_percentage?: number;
     }
     | undefined;
+  effort?: {
+    level: string;
+  };
   rate_limits?: {
     five_hour?: {
       used_percentage: number;
@@ -168,6 +178,7 @@ It then builds a status line showing:
 
 - Project name (if different from current directory)
 - Model name (or multiple models if used in session)
+- Effort level in brackets after the model name
 - Session cost in desired currency with currency code
 - Input/output token counts
 - Cache efficiency percentage
@@ -191,7 +202,7 @@ The status line tracks your Claude usage by:
 ### Example Output
 
 ```
-🤖 Opus 4.6 | 💰 $5.12 CAD | 📊 984/8.3K | ⚡ 100% | 🧠 5% (51K/1M) | 5h 98% (+15%, hit in 20m) (25m) | 7d 39% (-3%) (Sun 8:00 AM) | ⏱️ 5m | +150/-30 | 📂 my-project | 🌿 main
+🤖 Opus 4.6 (high) | 💰 $5.12 CAD | 📊 984/8.3K | ⚡ 100% | 🧠 5% (51K/1M) | 5h 98% (+15%, hit in 20m) (25m) | 7d 39% (-3%) (Sun 8:00 AM) | ⏱️ 5m | +150/-30 | 📂 my-project | 🌿 main
 ```
 
 ## Troubleshooting

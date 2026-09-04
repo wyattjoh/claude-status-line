@@ -12,6 +12,7 @@ import {
   prepareStatusLineOutput,
   shortenModelName,
 } from "./format.ts";
+import { formatEffortSuffix } from "./effort.ts";
 import { getGitInfo } from "./git.ts";
 import { getTerminalWidth } from "./terminal.ts";
 import {
@@ -105,6 +106,7 @@ async function buildStatusLine(options: BuildOptions): Promise<void> {
     cost,
     context_window: contextWindow,
     rate_limits: rateLimits,
+    effort,
   } = parseClaudeContext(input);
   const nowUnixSeconds = Math.floor(Date.now() / 1000);
   const rateLimitHistoryPath = getDefaultRateLimitHistoryPath();
@@ -240,15 +242,21 @@ async function buildStatusLine(options: BuildOptions): Promise<void> {
     components.push(decorate(0, `📁 ${basename(projectDir)}`));
   }
 
-  // Add AI model with icon - show multiple models if used
+  // Add AI model with icon - show multiple models if used, plus the
+  // current effort level in brackets when enabled and reported.
   if (show("model")) {
+    const effortSuffix = show("effort")
+      ? formatEffortSuffix(effort?.level)
+      : undefined;
+    const withEffort = (name: string) =>
+      effortSuffix ? `🤖 ${name} ${effortSuffix}` : `🤖 ${name}`;
     if (sessionMetrics && sessionMetrics.modelsUsed.length > 1) {
       const shortNames = sessionMetrics.modelsUsed.map(shortenModelName);
       components.push(
-        decorate(sessionMetricsMs, `🤖 ${shortNames.join("+")}`),
+        decorate(sessionMetricsMs, withEffort(shortNames.join("+"))),
       );
     } else {
-      components.push(decorate(0, `🤖 ${modelName}`));
+      components.push(decorate(0, withEffort(modelName)));
     }
   }
 

@@ -32,6 +32,9 @@ export interface ClaudeContext {
       remaining_percentage?: number;
     }
     | undefined;
+  effort?: {
+    level: string;
+  };
   rate_limits?: {
     five_hour?: RateLimitWindow;
     seven_day?: RateLimitWindow;

@@ -3,6 +3,7 @@ import { emphasizePercentage, formatCompactNumber } from "./format.ts";
 export const ALL_MODULES = [
   "project",
   "model",
+  "effort",
   "cost",
   "tokens",
   "cache",
