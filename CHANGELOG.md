@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.10.0](https://github.com/wyattjoh/claude-status-line/compare/claude-status-line-v0.9.0...claude-status-line-v0.10.0) (2026-09-04)
+
+
+### Features
+
+* add effort level module ([370f4cc](https://github.com/wyattjoh/claude-status-line/commit/370f4ccbcdbe3ebe6dd9ce6ed2a8941f95f9c362))
+* add effort level module ([5b9a250](https://github.com/wyattjoh/claude-status-line/commit/5b9a2509e185ce3d034003154ab15949b946072e))
+
 ## [0.9.0](https://github.com/wyattjoh/claude-status-line/compare/claude-status-line-v0.8.0...claude-status-line-v0.9.0) (2026-05-14)
 
 
