@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.10.1](https://github.com/wyattjoh/claude-status-line/compare/claude-status-line-v0.10.0...claude-status-line-v0.10.1) (2026-11-26)
+
+
+### Bug Fixes
+
+* make debug module opt-in when --modules is omitted ([1fc58fe](https://github.com/wyattjoh/claude-status-line/commit/1fc58fe534243beed2224e44773fbcf4665d7eed))
+
 ## [0.10.0](https://github.com/wyattjoh/claude-status-line/compare/claude-status-line-v0.9.0...claude-status-line-v0.10.0) (2026-09-04)
 
 
