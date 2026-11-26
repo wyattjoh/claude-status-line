@@ -2,6 +2,7 @@ import { assertEquals, assertThrows } from "jsr:@std/assert";
 
 import {
   ALL_MODULES,
+  DEFAULT_MODULES,
   formatCacheModule,
   formatContextModule,
   parseModules,
@@ -10,6 +11,11 @@ import {
 Deno.test("ALL_MODULES includes session and week", () => {
   assertEquals(ALL_MODULES.includes("session"), true);
   assertEquals(ALL_MODULES.includes("week"), true);
+});
+
+Deno.test("DEFAULT_MODULES excludes the opt-in debug module", () => {
+  assertEquals(DEFAULT_MODULES.has("debug"), false);
+  assertEquals(DEFAULT_MODULES.size, ALL_MODULES.length - 1);
 });
 
 Deno.test("parseModules accepts rate-limit module names", () => {

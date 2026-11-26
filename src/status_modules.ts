@@ -20,6 +20,13 @@ export const ALL_MODULES = [
 
 export type Module = typeof ALL_MODULES[number];
 
+// Modules that only render when explicitly listed in --modules.
+const OPT_IN_MODULES: ReadonlySet<Module> = new Set(["debug"]);
+
+export const DEFAULT_MODULES: ReadonlySet<Module> = new Set(
+  ALL_MODULES.filter((name) => !OPT_IN_MODULES.has(name)),
+);
+
 export function parseModules(modules: string): Set<Module> {
   const names = modules.split(",").map((name) => name.trim());
   const invalid = names.filter((name) => !ALL_MODULES.includes(name as Module));

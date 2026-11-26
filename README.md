@@ -50,7 +50,7 @@ Supported currencies include: USD, EUR, GBP, JPY, AUD, and many others. Defaults
 
 #### Modules
 
-You can selectively enable status line modules using the `--modules` / `-m` flag with a comma-separated list of module names. When omitted, all modules are shown.
+You can selectively enable status line modules using the `--modules` / `-m` flag with a comma-separated list of module names. When omitted, all modules except `debug` are shown.
 
 ```json
 {
@@ -79,6 +79,7 @@ Available modules:
 | `dir`      | 📂    | Current directory                            |
 | `git`      | 🌿    | Git branch                                   |
 | `weather`  | icon  | Weather info (requires --location)           |
+| `debug`    | 🐞    | Render timings and cache icons (opt-in only) |
 
 `session` and `week` only appear when Claude Code includes the
 subscriber-only `rate_limits` field in stdin.

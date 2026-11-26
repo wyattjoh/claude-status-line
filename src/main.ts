@@ -42,6 +42,7 @@ import {
 } from "./rate_limit_history.ts";
 import {
   ALL_MODULES,
+  DEFAULT_MODULES,
   formatCacheModule,
   formatContextModule,
   type Module,
@@ -77,12 +78,12 @@ function cacheIcon(ms: number): string {
 interface BuildOptions {
   currency: string;
   location: string | undefined;
-  modules: Set<Module> | undefined;
+  modules: ReadonlySet<Module>;
 }
 
 async function buildStatusLine(options: BuildOptions): Promise<void> {
   const startedAtMs = performance.now();
-  const show = (name: Module) => !options.modules || options.modules.has(name);
+  const show = (name: Module) => options.modules.has(name);
 
   if (options.location && !show("weather")) {
     throw new Error(
@@ -417,14 +418,13 @@ if (import.meta.main) {
       )
       .option(
         "-m, --modules <modules:string>",
-        "Comma-separated list of modules to display (default: all). Valid modules: " +
+        "Comma-separated list of modules to display (default: all except debug). Valid modules: " +
           ALL_MODULES.join(", "),
       )
       .action(async (options) => {
-        let modules: Set<Module> | undefined;
-        if (options.modules) {
-          modules = parseModules(options.modules);
-        }
+        const modules = options.modules
+          ? parseModules(options.modules)
+          : DEFAULT_MODULES;
         await buildStatusLine({
           currency: options.currency,
           location: options.location,
